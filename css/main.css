@@ -509,13 +509,7 @@ body {
   }
   
   .history-panel {
-    position: static;
-    width: 100%;
-    height: 120px;
-    border-radius: 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    resize: none;
+    display: none;
   }
   
   .history-header {
