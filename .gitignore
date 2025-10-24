@@ -1,0 +1,27 @@
+# Игнорируемые файлы и папки
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencies (если будут использоваться)
+node_modules/
+
+# Build files (если будет сборка)
+dist/
+build/
+
+# Временные файлы
+*.tmp
+*.temp
+.cache/
