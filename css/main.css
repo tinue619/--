@@ -508,16 +508,10 @@ body {
     padding: 10px;
   }
   
-  .history-panel {
-    position: static;
-    width: 100%;
-    height: 200px;
-    border-radius: 0;
-    border: none;
-    border-top: 1px solid var(--border);
-    resize: none;
-  }
   
+  .history-panel {
+     display: none;
+  }
   .history-header {
     cursor: default;
   }
