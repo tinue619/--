@@ -1722,3 +1722,305 @@ function initMobilePanel() {
 
 // Вызываем при загрузке
 document.addEventListener('DOMContentLoaded', initMobilePanel);
+
+// ============================================
+// CABINET EDITOR - MOBILE INITIALIZATION
+// Добавь этот код в конец main.js
+// ============================================
+
+/**
+ * Инициализация мобильного интерфейса
+ */
+function initMobileInterface() {
+  // Проверяем, мобильное ли устройство
+  const isMobile = window.innerWidth <= 1024;
+  
+  if (!isMobile) return;
+  
+  // Инициализация выдвижной панели управления
+  initDrawerPanel();
+  
+  // Инициализация табов
+  initMobileTabs();
+  
+  // Оптимизация touch событий
+  initTouchOptimization();
+  
+  // Добавляем класс для мобильных стилей
+  document.body.classList.add('is-mobile');
+}
+
+/**
+ * Выдвижная панель управления
+ */
+function initDrawerPanel() {
+  const toolbar = document.querySelector('.toolbar');
+  if (!toolbar) return;
+  
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  
+  // Клик по заголовку открывает/закрывает
+  const header = toolbar.querySelector('h1');
+  if (header) {
+    header.addEventListener('click', () => {
+      toolbar.classList.toggle('open');
+    });
+  }
+  
+  // Свайп для открытия/закрытия
+  toolbar.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    isDragging = true;
+  });
+  
+  toolbar.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+    
+    // Если свайп вниз и панель открыта
+    if (diff > 50 && toolbar.classList.contains('open')) {
+      toolbar.classList.remove('open');
+      isDragging = false;
+    }
+    // Если свайп вверх и панель закрыта
+    else if (diff < -50 && !toolbar.classList.contains('open')) {
+      toolbar.classList.add('open');
+      isDragging = false;
+    }
+  });
+  
+  toolbar.addEventListener('touchend', () => {
+    isDragging = false;
+  });
+  
+  // Закрываем панель при клике на кнопку действия
+  const buttons = toolbar.querySelectorAll('.mode-btn, .action-btn, .clear-btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Небольшая задержка для визуального фидбека
+      setTimeout(() => {
+        toolbar.classList.remove('open');
+      }, 150);
+    });
+  });
+}
+
+/**
+ * Инициализация табов
+ */
+function initMobileTabs() {
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => {
+      // Убираем активный класс со всех
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      
+      // Добавляем активный класс текущему
+      tab.classList.add('active');
+      if (panels[index]) {
+        panels[index].classList.add('active');
+      }
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('activeTab', index);
+      
+      // Вибрация для фидбека (если поддерживается)
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+    });
+  });
+  
+  // Восстанавливаем последний активный таб
+  const savedTab = localStorage.getItem('activeTab');
+  if (savedTab !== null) {
+    tabs[savedTab]?.click();
+  }
+}
+
+/**
+ * Оптимизация touch событий
+ */
+function initTouchOptimization() {
+  const canvas = document.getElementById('editor-canvas');
+  if (!canvas) return;
+  
+  // Отключаем стандартные жесты браузера
+  canvas.style.touchAction = 'none';
+  canvas.style.webkitUserSelect = 'none';
+  canvas.style.webkitTouchCallout = 'none';
+  
+  // Используем passive: false для предотвращения прокрутки
+  const options = { passive: false };
+  
+  canvas.addEventListener('touchstart', handleTouchStart, options);
+  canvas.addEventListener('touchmove', handleTouchMove, options);
+  canvas.addEventListener('touchend', handleTouchEnd, options);
+  
+  // Предотвращаем случайный zoom
+  document.addEventListener('gesturestart', (e) => {
+    e.preventDefault();
+  });
+  
+  // Двойной тап для zoom (опционально)
+  let lastTap = 0;
+  canvas.addEventListener('touchend', (e) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    
+    if (tapLength < 300 && tapLength > 0) {
+      // Двойной тап - можно добавить zoom функциональность
+      e.preventDefault();
+    }
+    lastTap = currentTime;
+  });
+}
+
+/**
+ * Обработчики touch событий для canvas
+ */
+function handleTouchStart(e) {
+  e.preventDefault();
+  
+  const touch = e.touches[0];
+  const rect = e.target.getBoundingClientRect();
+  
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  
+  // Вызываем обработчик из основного приложения
+  if (window.handleCanvasPointerDown) {
+    window.handleCanvasPointerDown(x, y);
+  }
+  
+  // Визуальный фидбек
+  showTouchFeedback(touch.clientX, touch.clientY);
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  
+  const touch = e.touches[0];
+  const rect = e.target.getBoundingClientRect();
+  
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  
+  // Вызываем обработчик из основного приложения
+  if (window.handleCanvasPointerMove) {
+    window.handleCanvasPointerMove(x, y);
+  }
+}
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  
+  // Вызываем обработчик из основного приложения
+  if (window.handleCanvasPointerUp) {
+    window.handleCanvasPointerUp();
+  }
+}
+
+/**
+ * Визуальный фидбек при касании
+ */
+function showTouchFeedback(x, y) {
+  const ripple = document.createElement('div');
+  ripple.style.cssText = `
+    position: fixed;
+    left: ${x}px;
+    top: ${y}px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 102, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    animation: rippleFeedback 400ms ease-out;
+    pointer-events: none;
+    z-index: 9999;
+  `;
+  
+  document.body.appendChild(ripple);
+  
+  setTimeout(() => {
+    ripple.remove();
+  }, 400);
+}
+
+/**
+ * Добавляем CSS для ripple анимации
+ */
+function addRippleStyles() {
+  if (document.getElementById('ripple-styles')) return;
+  
+  const style = document.createElement('style');
+  style.id = 'ripple-styles';
+  style.textContent = `
+    @keyframes rippleFeedback {
+      to {
+        transform: translate(-50%, -50%) scale(3);
+        opacity: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+/**
+ * Утилита для определения типа устройства
+ */
+function getDeviceType() {
+  const ua = navigator.userAgent;
+  
+  if (/tablet|ipad|playbook|silk/i.test(ua)) {
+    return 'tablet';
+  }
+  
+  if (/mobile|iphone|ipod|android|blackberry|opera|mini|windows\sce|palm|smartphone|iemobile/i.test(ua)) {
+    return 'mobile';
+  }
+  
+  return 'desktop';
+}
+
+/**
+ * Инициализация при загрузке
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  initMobileInterface();
+  addRippleStyles();
+  
+  // Обновляем при изменении размера окна
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const wasMobile = document.body.classList.contains('is-mobile');
+      const isMobile = window.innerWidth <= 1024;
+      
+      if (wasMobile !== isMobile) {
+        location.reload(); // Перезагружаем для переключения интерфейса
+      }
+    }, 250);
+  });
+  
+  // Логируем тип устройства для отладки
+  console.log('Cabinet Editor - Device:', getDeviceType());
+  console.log('Cabinet Editor - Mobile UI:', window.innerWidth <= 1024 ? 'Enabled' : 'Disabled');
+});
+
+/**
+ * Экспорт функций для использования в основном приложении
+ */
+window.CabinetEditorMobile = {
+  initMobileInterface,
+  showTouchFeedback,
+  getDeviceType
+};
