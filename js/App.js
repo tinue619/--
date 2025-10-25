@@ -1689,3 +1689,36 @@ export class App {
     }
   }
 }
+
+// Инициализация мобильной панели
+function initMobilePanel() {
+  if (window.innerWidth <= 1024) {
+    const toolbar = document.querySelector('.toolbar');
+    
+    if (toolbar) {
+      // Клик по заголовку открывает/закрывает
+      toolbar.addEventListener('click', function(e) {
+        if (e.target === toolbar || e.target.tagName === 'H1') {
+          this.classList.toggle('open');
+        }
+      });
+      
+      // Свайп вниз закрывает
+      let startY = 0;
+      
+      toolbar.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+      });
+      
+      toolbar.addEventListener('touchmove', function(e) {
+        const currentY = e.touches[0].clientY;
+        if (currentY - startY > 50) {
+          this.classList.remove('open');
+        }
+      });
+    }
+  }
+}
+
+// Вызываем при загрузке
+document.addEventListener('DOMContentLoaded', initMobilePanel);
