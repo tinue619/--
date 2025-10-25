@@ -720,7 +720,7 @@ body {
 
 .viewer-panel {
   flex: 1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2c2c2c;
   position: relative;
   display: none;
 }
