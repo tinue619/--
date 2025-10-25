@@ -1485,3 +1485,8 @@ body {
     box-shadow: var(--shadow-md);
   }
 }
+
+
+.viewer-info {
+  display: none !important;
+}
