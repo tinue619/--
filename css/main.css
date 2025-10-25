@@ -1490,3 +1490,115 @@ body {
 .viewer-info {
   display: none !important;
 }
+
+/* МОБИЛЬНЫЙ РЕЖИМ - ПОЛНОЭКРАННЫЙ CANVAS С ВЫДВИЖНОЙ ПАНЕЛЬЮ */
+@media (max-width: 1024px) {
+  /* Canvas на весь экран */
+  .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0;
+    background: var(--canvas-bg);
+  }
+  
+  #editor-canvas {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  /* Превращаем toolbar в выдвижную панель */
+  .toolbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    transform: translateY(calc(100% - 50px));
+    transition: transform 0.3s ease;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow-y: auto;
+    border: none;
+    border-top: 1px solid var(--border-light);
+  }
+  
+  /* Ручка для открытия панели */
+  .toolbar::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: var(--border-medium);
+    border-radius: 2px;
+  }
+  
+  /* Заголовок теперь кликабельный для открытия/закрытия */
+  .toolbar h1 {
+    padding-top: 20px;
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+  }
+  
+  /* Открытое состояние панели (добавь класс через JS) */
+  .toolbar.open {
+    transform: translateY(0);
+  }
+  
+  /* Статус бар сверху вместо снизу */
+  .status {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    border-top: none;
+    border-bottom: 1px solid var(--border-light);
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    z-index: 50;
+  }
+  
+  /* Убираем нижние табы когда есть выдвижная панель */
+  .tabs-container {
+    display: none !important;
+  }
+  
+  /* Панель на весь экран */
+  .editor-panel.active {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+  }
+  
+  /* Кнопка быстрого добавления */
+  .mode-buttons::after {
+    content: '+';
+    position: fixed;
+    bottom: 70px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 99;
+  }
+}
