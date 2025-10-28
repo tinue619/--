@@ -3,6 +3,19 @@ import { CONFIG, CALC } from './config.js';
 import { Panel } from './Panel.js';
 import { Viewer3D } from './Viewer3D.js';
 
+// Импорты модулей
+import { 
+  setupHistoryDrag, 
+  toggleHistoryCollapse, 
+  copyHistoryLogs, 
+  logToHistory, 
+  clearHistoryLog, 
+  compareStatesForLog 
+} from './modules/historyLogging.js';
+import { debugHistory, debugCurrentState, compareStates } from './modules/historyDebug.js';
+import { render2D } from './modules/render2D.js';
+import { initViewer3D, renderAll3D, updateMesh, removeMesh } from './modules/render3D.js';
+
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
   constructor() {
@@ -70,11 +83,11 @@ export class App {
     this.setupEvents();
     this.updateCanvas();
     this.loadState();
-    this.render2D();
+    render2D(this);
     this.updateStats();
     
     if (window.innerWidth > 1024) {
-      setTimeout(() => this.initViewer3D(), 100);
+      setTimeout(() => initViewer3D(this), 100);
     }
     
     // Для отладки - доступно в консоли через window.app
@@ -99,12 +112,12 @@ export class App {
     addListener('.clear-btn', 'click', () => this.clearAll());
     addListener('#undo-btn', 'click', () => this.undo());
     addListener('#redo-btn', 'click', () => this.redo());
-    addListener('#clear-history-btn', 'click', () => this.clearHistoryLog());
-    addListener('#collapse-history-btn', 'click', () => this.toggleHistoryCollapse());
-    addListener('#copy-history-btn', 'click', () => this.copyHistoryLogs());
+    addListener('#clear-history-btn', 'click', () => clearHistoryLog());
+    addListener('#collapse-history-btn', 'click', () => toggleHistoryCollapse());
+    addListener('#copy-history-btn', 'click', () => copyHistoryLogs(this));
     
     // Перетаскивание панели истории
-    this.setupHistoryDrag();
+    setupHistoryDrag();
     
     // Canvas события
     const canvas = this.canvas.element;
@@ -149,7 +162,7 @@ export class App {
     
     if (tab.dataset.panel === 'viewer-panel') {
       setTimeout(() => {
-        if (!this.viewer3D) this.initViewer3D();
+        if (!this.viewer3D) initViewer3D(this);
         if (this.viewer3D) this.viewer3D.resize();
       }, 50);
     } else {
@@ -176,7 +189,7 @@ export class App {
     this.canvas.offset.x = (this.canvas.size - this.cabinet.width * this.canvas.scale) / 2;
     this.canvas.offset.y = (this.canvas.size - this.cabinet.height * this.canvas.scale) / 2;
     
-    this.render2D();
+    render2D(this);
   }
   
   getCoords(e) {
@@ -267,8 +280,8 @@ export class App {
         this.saveHistory();
       } else {
         this.interaction.dragging.mainPosition = this.interaction.originalPos;
-        this.render2D();
-        this.updateMesh(this.interaction.dragging);
+        render2D(this);
+        updateMesh(this, this.interaction.dragging);
       }
     }
     
@@ -424,8 +437,8 @@ export class App {
     }
     
     this.saveHistory();
-    this.render2D();
-    this.renderAll3D();  // Обновляем весь 3D вид
+    render2D(this);
+    renderAll3D(this);  // Обновляем весь 3D вид
     this.updateStats();
   }
   
@@ -468,8 +481,8 @@ export class App {
     // Обновляем bounds и connections только связанных панелей (включая ребра)
     this.updateConnectedPanels(panel);
     
-    this.render2D();
-    this.renderAll3D();
+    render2D(this);
+    renderAll3D(this);
   }
   
   // ========== ПЕРЕМЕЩЕНИЕ БОКОВИН ==========
@@ -577,14 +590,14 @@ export class App {
     
     // Обновляем отображение
     this.updateCanvas();
-    this.render2D();
+    render2D(this);
     
     // Обновляем 3D корпус
     if (this.viewer3D) {
       this.viewer3D.rebuildCabinet();
     }
     
-    this.renderAll3D();
+    renderAll3D(this);
     
     // Обновляем информацию о размерах шкафа
     this.updateCabinetInfo();
@@ -686,7 +699,7 @@ export class App {
     
     // Удаляем панели и их 3D объекты
     for (let p of toDelete) {
-      this.removeMesh(p);
+      removeMesh(this, p);
       this.panels.delete(p.id);
     }
     
@@ -703,8 +716,8 @@ export class App {
     }
     
     this.saveHistory();
-    this.render2D();
-    this.renderAll3D();
+    render2D(this);
+    renderAll3D(this);
     this.updateStats();
   }
   
@@ -780,13 +793,13 @@ export class App {
     const count = this.panels.size;
     
     for (let panel of this.panels.values()) {
-      this.removeMesh(panel);
+      removeMesh(this, panel);
     }
     
     this.panels.clear();
     
     this.saveHistory();
-    this.render2D();
+    render2D(this);
     this.updateStats();
   }
   
@@ -808,268 +821,6 @@ export class App {
       deserialized[key] = panelId ? this.panels.get(panelId) : null;
     }
     return deserialized;
-  }
-  
-  // ========== ЛОГИРОВАНИЕ ИСТОРИИ ==========
-  setupHistoryDrag() {
-    const historyPanel = document.getElementById('history-panel');
-    const historyHeader = document.getElementById('history-header');
-    if (!historyPanel || !historyHeader) return;
-    
-    let isDragging = false;
-    let currentX, currentY, initialX, initialY;
-    
-    const dragStart = (e) => {
-      // Не драгать если кликнули по кнопке
-      if (e.target.closest('button')) return;
-      
-      // Только на desktop
-      if (window.innerWidth <= 1024) return;
-      
-      isDragging = true;
-      
-      const rect = historyPanel.getBoundingClientRect();
-      initialX = rect.left;
-      initialY = rect.top;
-      currentX = e.clientX;
-      currentY = e.clientY;
-      
-      historyPanel.style.transition = 'none';
-    };
-    
-    const drag = (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      
-      const dx = e.clientX - currentX;
-      const dy = e.clientY - currentY;
-      
-      const newX = initialX + dx;
-      const newY = initialY + dy;
-      
-      // Ограничения по экрану
-      const maxX = window.innerWidth - historyPanel.offsetWidth;
-      const maxY = window.innerHeight - historyPanel.offsetHeight;
-      
-      const boundedX = Math.max(0, Math.min(newX, maxX));
-      const boundedY = Math.max(0, Math.min(newY, maxY));
-      
-      historyPanel.style.left = boundedX + 'px';
-      historyPanel.style.top = boundedY + 'px';
-      historyPanel.style.right = 'auto';
-      historyPanel.style.bottom = 'auto';
-    };
-    
-    const dragEnd = () => {
-      isDragging = false;
-      historyPanel.style.transition = '';
-    };
-    
-    historyHeader.addEventListener('mousedown', dragStart);
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', dragEnd);
-  }
-  
-  toggleHistoryCollapse() {
-    const historyPanel = document.getElementById('history-panel');
-    const collapseBtn = document.getElementById('collapse-history-btn');
-    if (!historyPanel || !collapseBtn) return;
-    
-    historyPanel.classList.toggle('collapsed');
-    collapseBtn.textContent = historyPanel.classList.contains('collapsed') ? '▲' : '▼';
-  }
-  
-  copyHistoryLogs() {
-    const historyContent = document.getElementById('history-content');
-    if (!historyContent) return;
-    
-    const entries = historyContent.querySelectorAll('.history-entry');
-    if (entries.length === 0) {
-      this.updateStatus('История пуста');
-      return;
-    }
-    
-    let logText = 'ИСТОРИЯ ИЗМЕНЕНИЙ CABINET EDITOR\n';
-    logText += '='.repeat(50) + '\n\n';
-    
-    entries.forEach((entry, index) => {
-      const time = entry.querySelector('.history-time')?.textContent || '';
-      const action = entry.querySelector('.history-action')?.textContent || '';
-      const details = entry.querySelector('.history-details');
-      
-      logText += `${time} ${action}\n`;
-      
-      if (details) {
-        const changes = details.querySelectorAll('.history-change');
-        changes.forEach(change => {
-          // Удаляем HTML теги и форматируем текст
-          const text = change.textContent
-            .replace(/\s+/g, ' ')
-            .trim();
-          logText += `  • ${text}\n`;
-        });
-      }
-      
-      logText += '\n';
-    });
-    
-    logText += '='.repeat(50) + '\n';
-    logText += `Всего записей: ${entries.length}\n`;
-    logText += `Дата: ${new Date().toLocaleString('ru-RU')}\n`;
-    
-    // Копируем в буфер обмена
-    navigator.clipboard.writeText(logText).then(() => {
-      this.updateStatus('✅ Логи скопированы в буфер обмена!');
-    }).catch(err => {
-      console.error('Ошибка копирования:', err);
-      this.updateStatus('❌ Ошибка копирования');
-    });
-  }
-  
-  logToHistory(action, details) {
-    const historyContent = document.getElementById('history-content');
-    if (!historyContent) return;
-    
-    // Удаляем сообщение "История пуста"
-    const emptyMsg = historyContent.querySelector('.history-empty');
-    if (emptyMsg) emptyMsg.remove();
-    
-    // Создаем новую запись
-    const entry = document.createElement('div');
-    entry.className = `history-entry ${action}`;
-    
-    const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    let actionText = '';
-    let actionIcon = '';
-    
-    switch(action) {
-      case 'save':
-        actionIcon = '💾';
-        actionText = 'Сохранено';
-        break;
-      case 'undo':
-        actionIcon = '⏮️';
-        actionText = 'Отменено';
-        break;
-      case 'redo':
-        actionIcon = '⏭️';
-        actionText = 'Возвращено';
-        break;
-    }
-    
-    let html = `
-      <span class="history-time">[${time}]</span>
-      <span class="history-action">${actionIcon} ${actionText}</span>
-    `;
-    
-    // Добавляем детали изменений
-    if (details && details.length > 0) {
-      html += '<div class="history-details">';
-      details.forEach(detail => {
-        html += `<div class="history-change">${detail}</div>`;
-      });
-      html += '</div>';
-    }
-    
-    entry.innerHTML = html;
-    historyContent.insertBefore(entry, historyContent.firstChild);
-    
-    // Ограничиваем количество записей
-    const entries = historyContent.querySelectorAll('.history-entry');
-    if (entries.length > 50) {
-      entries[entries.length - 1].remove();
-    }
-    
-    // Авто-скролл вверх к новой записи
-    historyContent.scrollTop = 0;
-  }
-  
-  clearHistoryLog() {
-    const historyContent = document.getElementById('history-content');
-    if (!historyContent) return;
-    
-    historyContent.innerHTML = '<div class="history-empty">История пуста</div>';
-  }
-  
-  compareStatesForLog(oldState, newState) {
-    const changes = [];
-    
-    // Проверяем изменение размеров шкафа
-    if (oldState && newState) {
-      if (oldState.cabinet && newState.cabinet) {
-        const oldWidth = oldState.cabinet.width;
-        const newWidth = newState.cabinet.width;
-        
-        if (Math.abs(oldWidth - newWidth) > 0.1) {
-          const diff = newWidth - oldWidth;
-          const diffClass = diff > 0 ? '' : 'negative';
-          const diffText = diff > 0 ? `+${Math.round(diff)}` : Math.round(diff);
-          
-          changes.push(`
-            <span>Ширина шкафа:</span>
-            <span class="history-change-value">${Math.round(oldWidth)}мм</span>
-            <span class="history-change-arrow">→</span>
-            <span class="history-change-value">${Math.round(newWidth)}мм</span>
-            <span class="history-change-diff ${diffClass}">(${diffText}мм)</span>
-          `);
-        }
-      }
-      
-      // Проверяем изменения панелей
-      const oldPanels = new Map(oldState.panels.map(p => [p.id, p]));
-      const newPanels = new Map(newState.panels.map(p => [p.id, p]));
-      
-      // Новые панели
-      const added = newState.panels.filter(p => !oldPanels.has(p.id));
-      if (added.length > 0) {
-        added.forEach(p => {
-          const icon = p.type === 'shelf' ? '📏' : '📐';
-          const typeName = p.type === 'shelf' ? 'Полка' : 'Разделитель';
-          changes.push(`<span>${icon} Добавлен: ${typeName}</span>`);
-        });
-      }
-      
-      // Удаленные панели
-      const removed = oldState.panels.filter(p => !newPanels.has(p.id));
-      if (removed.length > 0) {
-        removed.forEach(p => {
-          const icon = p.type === 'shelf' ? '📏' : '📐';
-          const typeName = p.type === 'shelf' ? 'Полка' : 'Разделитель';
-          changes.push(`<span>${icon} Удален: ${typeName}</span>`);
-        });
-      }
-      
-      // Измененные размеры панелей
-      for (let [id, oldPanel] of oldPanels) {
-        const newPanel = newPanels.get(id);
-        if (!newPanel) continue;
-        
-        const oldSize = oldPanel.type === 'shelf' 
-          ? oldPanel.bounds.endX - oldPanel.bounds.startX
-          : oldPanel.bounds.endY - oldPanel.bounds.startY;
-        const newSize = newPanel.type === 'shelf'
-          ? newPanel.bounds.endX - newPanel.bounds.startX
-          : newPanel.bounds.endY - newPanel.bounds.startY;
-        
-        if (Math.abs(oldSize - newSize) > 0.1) {
-          const icon = oldPanel.type === 'shelf' ? '📏' : '📐';
-          const diff = newSize - oldSize;
-          const diffClass = diff > 0 ? '' : 'negative';
-          const diffText = diff > 0 ? `+${Math.round(diff)}` : Math.round(diff);
-          
-          changes.push(`
-            <span>${icon} ${id}:</span>
-            <span class="history-change-value">${Math.round(oldSize)}мм</span>
-            <span class="history-change-arrow">→</span>
-            <span class="history-change-value">${Math.round(newSize)}мм</span>
-            <span class="history-change-diff ${diffClass}">(${diffText}мм)</span>
-          `);
-        }
-      }
-    }
-    
-    return changes;
   }
   
   // ========== ИСТОРИЯ ==========
@@ -1132,9 +883,9 @@ export class App {
     this.scheduleSave();
     
     // Логируем изменения
-    const changes = this.compareStatesForLog(prevState, state);
+    const changes = compareStatesForLog(prevState, state);
     if (changes.length > 0) {
-      this.logToHistory('save', changes);
+      logToHistory('save', changes);
     }
   }
   
@@ -1148,9 +899,9 @@ export class App {
     this.restoreState(prevState);
     
     // Логируем отмену: сравниваем ТЕКУЩЕЕ состояние из истории с ПРЕДЫДУЩИМ
-    const changes = this.compareStatesForLog(currentState, prevState);
+    const changes = compareStatesForLog(currentState, prevState);
     if (changes.length > 0) {
-      this.logToHistory('undo', changes);
+      logToHistory('undo', changes);
     }
   }
   
@@ -1164,9 +915,9 @@ export class App {
     this.restoreState(nextState);
     
     // Логируем повтор: сравниваем ТЕКУЩЕЕ состояние с СЛЕДУЮЩИМ
-    const changes = this.compareStatesForLog(currentState, nextState);
+    const changes = compareStatesForLog(currentState, nextState);
     if (changes.length > 0) {
-      this.logToHistory('redo', changes);
+      logToHistory('redo', changes);
     }
   }
   
@@ -1190,7 +941,7 @@ export class App {
     
     // Очищаем текущие панели
     for (let panel of this.panels.values()) {
-      this.removeMesh(panel);
+      removeMesh(this, panel);
     }
     this.panels.clear();
     
@@ -1215,8 +966,8 @@ export class App {
       }
     }
     
-    this.render2D();
-    this.renderAll3D();
+    render2D(this);
+    renderAll3D(this);
     this.updateStats();
     this.updateHistoryButtons();
   }
@@ -1226,163 +977,17 @@ export class App {
     document.getElementById('redo-btn').disabled = this.history.index >= this.history.states.length - 1;
   }
   
-  // ========== ОТЛАДКА ИСТОРИИ ==========
+  // ========== ОТЛАДКА ИСТОРИИ (обертки для модуля) ==========
   debugHistory() {
-    console.group('📚 История изменений');
-    console.log(`Всего состояний: ${this.history.states.length}`);
-    console.log(`Текущее состояние: ${this.history.index}`);
-    console.log('\n');
-    
-    this.history.states.forEach((state, index) => {
-      const isCurrent = index === this.history.index;
-      console.group(`${isCurrent ? '👉' : '  '} Состояние #${index}`);
-      
-      // Размеры шкафа
-      if (state.cabinet) {
-        console.log('🗄️ Шкаф:', {
-          ширина: state.cabinet.width,
-          высота: state.cabinet.height,
-          глубина: state.cabinet.depth
-        });
-      }
-      
-      // Панели
-      console.log(`📦 Панелей: ${state.panels.length}`);
-      state.panels.forEach(panel => {
-        const type = panel.type === 'shelf' ? '📏' : '📐';
-        const pos = panel.type === 'shelf' ? `y:${panel.position.y}` : `x:${panel.position.x}`;
-        const bounds = panel.type === 'shelf' 
-          ? `[${panel.bounds.startX} - ${panel.bounds.endX}] = ${panel.bounds.endX - panel.bounds.startX}мм`
-          : `[${panel.bounds.startY} - ${panel.bounds.endY}] = ${panel.bounds.endY - panel.bounds.startY}мм`;
-        
-        console.log(`  ${type} ${panel.id}: ${pos}, bounds: ${bounds}`);
-      });
-      
-      console.groupEnd();
-    });
-    
-    console.groupEnd();
+    debugHistory(this);
   }
   
   debugCurrentState() {
-    console.group('🔍 Текущее состояние');
-    
-    console.log('🗄️ Шкаф:', {
-      ширина: this.cabinet.width,
-      высота: this.cabinet.height,
-      глубина: this.cabinet.depth
-    });
-    
-    console.log('\n📦 Панели:');
-    for (let panel of this.panels.values()) {
-      const type = panel.type === 'shelf' ? '📏 Полка' : '📐 Разделитель';
-      console.group(`${type}: ${panel.id}`);
-      console.log('Позиция:', panel.position);
-      console.log('Границы:', panel.bounds);
-      console.log('Размер:', panel.size, 'мм');
-      console.log('Связи:', {
-        left: panel.connections.left?.id || null,
-        right: panel.connections.right?.id || null,
-        top: panel.connections.top?.id || null,
-        bottom: panel.connections.bottom?.id || null
-      });
-      if (panel.ribs && panel.ribs.length > 0) {
-        console.log('Ребра:', panel.ribs.map(r => `[${r.startX}-${r.endX}]=${r.endX-r.startX}мм`));
-      }
-      console.groupEnd();
-    }
-    
-    console.groupEnd();
+    debugCurrentState(this);
   }
   
   compareStates(index1, index2) {
-    if (index1 < 0 || index1 >= this.history.states.length ||
-        index2 < 0 || index2 >= this.history.states.length) {
-      console.error('Недопустимые индексы состояний');
-      return;
-    }
-    
-    const state1 = this.history.states[index1];
-    const state2 = this.history.states[index2];
-    
-    console.group(`🔄 Сравнение состояний #${index1} и #${index2}`);
-    
-    // Сравниваем размеры шкафа
-    if (state1.cabinet && state2.cabinet) {
-      const widthChanged = state1.cabinet.width !== state2.cabinet.width;
-      const heightChanged = state1.cabinet.height !== state2.cabinet.height;
-      
-      if (widthChanged || heightChanged) {
-        console.log('🗄️ Размеры шкафа изменились:');
-        if (widthChanged) {
-          console.log(`  Ширина: ${state1.cabinet.width} → ${state2.cabinet.width} (${state2.cabinet.width - state1.cabinet.width > 0 ? '+' : ''}${state2.cabinet.width - state1.cabinet.width}мм)`);
-        }
-        if (heightChanged) {
-          console.log(`  Высота: ${state1.cabinet.height} → ${state2.cabinet.height}`);
-        }
-      } else {
-        console.log('🗄️ Размеры шкафа не изменились');
-      }
-    }
-    
-    // Сравниваем панели
-    const panels1Map = new Map(state1.panels.map(p => [p.id, p]));
-    const panels2Map = new Map(state2.panels.map(p => [p.id, p]));
-    
-    // Новые панели
-    const added = state2.panels.filter(p => !panels1Map.has(p.id));
-    if (added.length > 0) {
-      console.log('\n➕ Добавлено панелей:', added.length);
-      added.forEach(p => console.log(`  - ${p.id}`));
-    }
-    
-    // Удаленные панели
-    const removed = state1.panels.filter(p => !panels2Map.has(p.id));
-    if (removed.length > 0) {
-      console.log('\n➖ Удалено панелей:', removed.length);
-      removed.forEach(p => console.log(`  - ${p.id}`));
-    }
-    
-    // Измененные панели
-    const changed = [];
-    for (let [id, panel1] of panels1Map) {
-      const panel2 = panels2Map.get(id);
-      if (!panel2) continue;
-      
-      const posChanged = JSON.stringify(panel1.position) !== JSON.stringify(panel2.position);
-      const boundsChanged = JSON.stringify(panel1.bounds) !== JSON.stringify(panel2.bounds);
-      
-      if (posChanged || boundsChanged) {
-        changed.push({ id, panel1, panel2, posChanged, boundsChanged });
-      }
-    }
-    
-    if (changed.length > 0) {
-      console.log('\n📝 Изменено панелей:', changed.length);
-      changed.forEach(({ id, panel1, panel2, posChanged, boundsChanged }) => {
-        console.group(`  ${id}`);
-        if (posChanged) {
-          console.log('Позиция:', panel1.position, '→', panel2.position);
-        }
-        if (boundsChanged) {
-          const size1 = panel1.type === 'shelf' 
-            ? panel1.bounds.endX - panel1.bounds.startX
-            : panel1.bounds.endY - panel1.bounds.startY;
-          const size2 = panel2.type === 'shelf'
-            ? panel2.bounds.endX - panel2.bounds.startX
-            : panel2.bounds.endY - panel2.bounds.startY;
-          console.log('Границы:', panel1.bounds, '→', panel2.bounds);
-          console.log(`Размер: ${size1}мм → ${size2}мм (${size2 - size1 > 0 ? '+' : ''}${size2 - size1}мм)`);
-        }
-        console.groupEnd();
-      });
-    }
-    
-    if (added.length === 0 && removed.length === 0 && changed.length === 0) {
-      console.log('\n✅ Панели не изменились');
-    }
-    
-    console.groupEnd();
+    compareStates(this, index1, index2);
   }
   
   // ========== СОХРАНЕНИЕ ==========
@@ -1496,196 +1101,5 @@ export class App {
     document.getElementById('stat-width').textContent = `${Math.round(this.cabinet.width)} мм`;
     document.getElementById('stat-height').textContent = `${Math.round(this.cabinet.height)} мм`;
     document.getElementById('stat-depth').textContent = `${Math.round(this.cabinet.depth)} мм`;
-  }
-  
-  // ========== 2D ОТРИСОВКА ==========
-  render2D() {
-    const ctx = this.canvas.ctx;
-    const { size, scale, offset } = this.canvas;
-    
-    ctx.clearRect(0, 0, size, size);
-    ctx.save();
-    ctx.translate(offset.x, offset.y);
-    
-    const toY = (y) => size - offset.y * 2 - (y * scale);
-    
-    // Фон кабинета
-    ctx.fillStyle = '#fafafa';
-    ctx.fillRect(
-      CONFIG.DSP * scale,
-      toY(this.cabinet.height - CONFIG.DSP),
-      this.calc.innerWidth * scale,
-      this.calc.workHeight * scale
-    );
-    
-    // Корпус
-    ctx.fillStyle = '#8B6633';
-    
-    // Боковины (подсвечиваем если двигаем)
-    const isLeftSideActive = this.interaction.dragging && this.interaction.dragging.id === 'left-side';
-    const isRightSideActive = this.interaction.dragging && this.interaction.dragging.id === 'right-side';
-    
-    ctx.fillStyle = isLeftSideActive ? CONFIG.COLORS.ACTIVE : '#8B6633';
-    ctx.fillRect(0, toY(this.cabinet.height), CONFIG.DSP * scale, this.cabinet.height * scale);
-    
-    ctx.fillStyle = isRightSideActive ? CONFIG.COLORS.ACTIVE : '#8B6633';
-    ctx.fillRect((this.cabinet.width - CONFIG.DSP) * scale, toY(this.cabinet.height), CONFIG.DSP * scale, this.cabinet.height * scale);
-    
-    // Дно
-    ctx.fillStyle = '#8B6633';
-    ctx.fillRect(CONFIG.DSP * scale, toY(this.cabinet.base), this.calc.innerWidth * scale, CONFIG.DSP * scale);
-    
-    // Крыша
-    ctx.fillRect(CONFIG.DSP * scale, toY(this.cabinet.height), this.calc.innerWidth * scale, CONFIG.DSP * scale);
-    
-    // Цоколь
-    ctx.fillStyle = '#654321';
-    ctx.fillRect(
-      CONFIG.DSP * scale,
-      toY(this.cabinet.base - CONFIG.DSP),
-      this.calc.innerWidth * scale,
-      (this.cabinet.base - CONFIG.DSP) * scale
-    );
-    
-    // Панели
-    for (let panel of this.panels.values()) {
-      ctx.fillStyle = this.interaction.dragging === panel ? CONFIG.COLORS.ACTIVE : '#8B6633';
-      
-      if (panel.isHorizontal) {
-        // Полка
-        ctx.fillRect(
-          panel.bounds.startX * scale,
-          toY(panel.position.y + CONFIG.DSP),
-          panel.size * scale,
-          CONFIG.DSP * scale
-        );
-        
-        // Ребра жесткости (если есть) - прижаты к низу полки
-        if (panel.ribs.length > 0) {
-          ctx.fillStyle = '#7A5A2F';  // Чуть темнее для ребра
-          for (let rib of panel.ribs) {
-            ctx.fillRect(
-              rib.startX * scale,
-              toY(panel.position.y),  // Верх ребра = низ полки
-              (rib.endX - rib.startX) * scale,
-              CONFIG.RIB.HEIGHT * scale
-            );
-          }
-          // Восстанавливаем цвет для следующих элементов
-          ctx.fillStyle = this.interaction.dragging === panel ? CONFIG.COLORS.ACTIVE : '#8B6633';
-        }
-      } else {
-        // Разделитель
-        ctx.fillRect(
-          panel.position.x * scale,
-          toY(panel.bounds.endY),
-          CONFIG.DSP * scale,
-          panel.size * scale
-        );
-      }
-    }
-    
-    ctx.restore();
-  }
-  
-  // ========== 3D ВИЗУАЛИЗАЦИЯ ==========
-  initViewer3D() {
-    this.viewer3D = new Viewer3D(this);
-    this.renderAll3D();
-  }
-  
-  renderAll3D() {
-    if (!this.viewer3D) return;
-    
-    for (let panel of this.panels.values()) {
-      this.updateMesh(panel);
-    }
-  }
-  
-  updateMesh(panel) {
-    if (!this.viewer3D) return;
-    
-    let mesh = this.mesh3D.get(panel.id);
-    const geometry = panel.getGeometry(this.cabinet.depth);
-    
-    if (!mesh) {
-      const geom = new THREE.BoxGeometry(geometry.width, geometry.height, geometry.depth);
-      mesh = new THREE.Mesh(geom, this.viewer3D.materials.dsp);
-      this.viewer3D.dynamicGroup.add(mesh);
-      this.mesh3D.set(panel.id, mesh);
-    } else {
-      const params = mesh.geometry.parameters;
-      if (params.width !== geometry.width || params.height !== geometry.height) {
-        mesh.geometry.dispose();
-        mesh.geometry = new THREE.BoxGeometry(geometry.width, geometry.height, geometry.depth);
-      }
-    }
-    
-    mesh.position.copy(panel.get3DPosition(this.cabinet.width, this.cabinet.depth));
-    
-    // Обрабатываем ребра жесткости для полок
-    if (panel.isHorizontal) {
-      // Удаляем все старые ребра
-      for (let i = 0; i < 10; i++) {  // Максимум 10 ребер на полку
-        const ribId = `${panel.id}-rib-${i}`;
-        const oldRib = this.mesh3D.get(ribId);
-        if (oldRib) {
-          this.viewer3D.dynamicGroup.remove(oldRib);
-          oldRib.geometry.dispose();
-          this.mesh3D.delete(ribId);
-        }
-      }
-      
-      // Создаем новые ребра
-      panel.ribs.forEach((rib, index) => {
-        const ribId = `${panel.id}-rib-${index}`;
-        const ribWidth = rib.endX - rib.startX;
-        
-        // Ребро с меньшей глубиной, прижатое к задней стенке
-        const ribGeom = new THREE.BoxGeometry(
-          ribWidth,
-          CONFIG.RIB.HEIGHT,
-          CONFIG.RIB.DEPTH
-        );
-        const ribMesh = new THREE.Mesh(ribGeom, this.viewer3D.materials.rib);
-        
-        // Позиционируем ребро под полкой в правильном пролете
-        // Y: прижато к низу полки (без зазора)
-        // Z: у задней стенки (cabDepth - hdfThick)
-        ribMesh.position.set(
-          (rib.startX + rib.endX) / 2 - this.cabinet.width / 2,
-          panel.position.y - CONFIG.RIB.HEIGHT/2,
-          -this.cabinet.depth/2 + CONFIG.HDF + CONFIG.RIB.DEPTH/2
-        );
-        
-        this.viewer3D.dynamicGroup.add(ribMesh);
-        this.mesh3D.set(ribId, ribMesh);
-      });
-    }
-  }
-  
-  removeMesh(panel) {
-    if (!this.viewer3D) return;
-    
-    // Удаляем основную панель
-    const mesh = this.mesh3D.get(panel.id);
-    if (mesh) {
-      this.viewer3D.dynamicGroup.remove(mesh);
-      mesh.geometry.dispose();
-      this.mesh3D.delete(panel.id);
-    }
-    
-    // Удаляем ребра, если есть
-    if (panel.isHorizontal) {
-      for (let i = 0; i < 10; i++) {  // Максимум 10 ребер на полку
-        const ribId = `${panel.id}-rib-${i}`;
-        const ribMesh = this.mesh3D.get(ribId);
-        if (ribMesh) {
-          this.viewer3D.dynamicGroup.remove(ribMesh);
-          ribMesh.geometry.dispose();
-          this.mesh3D.delete(ribId);
-        }
-      }
-    }
   }
 }
