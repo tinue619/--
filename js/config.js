@@ -17,7 +17,7 @@ export const CONFIG = {
   },
   UI: {
     MIN_MOVE: 5,
-    SNAP: 15,
+    SNAP: 45,  // Увеличено для удобного touch захвата (было 15)
     SCALE_PADDING: 0.85,
     MAX_HISTORY: 50,
     SAVE_DELAY: 500
