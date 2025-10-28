@@ -20,6 +20,7 @@ export class Viewer3D {
     // Сцена
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xe8eaf6);
+    this.scene.fog = new THREE.Fog(0xe8eaf6, 100, 1);
     
     // Камера
     this.camera = new THREE.PerspectiveCamera(

@@ -1,335 +1,29 @@
-/* ============================================
-   CABINET EDITOR - MOBILE FIRST CSS
-   Версия: 2.0
-   Фокус: Мобильный UX, минимализм, функциональность
-   ============================================ */
-
-/* ============================================
-   1. БАЗОВЫЕ СТИЛИ И CSS ПЕРЕМЕННЫЕ
-   ============================================ */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  /* Цвета - минималистичная палитра */
-  --color-bg: #ffffff;
-  --color-surface: #f8f9fa;
-  --color-border: #dee2e6;
-  --color-text: #212529;
-  --color-text-secondary: #6c757d;
-  
-  /* Акцентные цвета */
-  --color-primary: #0066ff;
-  --color-primary-hover: #0052cc;
-  --color-danger: #dc3545;
-  --color-success: #28a745;
-  
-  /* Canvas */
-  --canvas-bg: #f1f5f9;
-  --panel-color: #8b6f47;
-  --divider-color: #4a90e2;
-  
-  /* Тени */
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.16);
-  
-  /* Размеры */
-  --header-height: 44px;
-  --tab-height: 56px;
-  --touch-target: 44px;
-  --drawer-peek: 60px;
-  
-  /* Анимации */
-  --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Отступы */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  
-  /* Радиусы */
-  --radius: 12px;
-  --radius-lg: 20px;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #e8e8e8;
+  --border: #d0d0d0;
+  --text: #333333;
+  --text-secondary: #666666;
+  --accent: #2196F3;
+  --accent-hover: #1976D2;
+  --danger: #f44336;
+  --success: #4CAF50;
+  --canvas-bg: #fafafa;
+  --shadow: rgba(0,0,0,0.1);
 }
-
-/* Темная тема (автоматически) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1a1a1a;
-    --color-surface: #2d2d2d;
-    --color-border: #404040;
-    --color-text: #ffffff;
-    --color-text-secondary: #b3b3b3;
-    --canvas-bg: #242424;
-  }
-}
-
-/* ============================================
-   2. ОСНОВНАЯ СТРУКТУРА
-   ============================================ */
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
-  background: var(--color-bg);
-  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text);
   display: flex;
   height: 100vh;
-  height: 100dvh;
   overflow: hidden;
   touch-action: none;
-  -webkit-font-smoothing: antialiased;
-  position: relative;
 }
-
-/* ============================================
-   3. ДЕСКТОП LAYOUT (1025px+)
-   ============================================ */
-
-/* Боковая панель редактора */
-.editor-panel {
-  width: 400px;
-  background: var(--color-surface);
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--color-border);
-  transition: transform var(--transition);
-}
-
-/* 3D просмотр */
-.viewer-panel {
-  flex: 1;
-  background: #2c2c2c; /* Нейтральный для 3D как в Blender */
-  position: relative;
-  display: flex;
-}
-
-/* ============================================
-   4. ПАНЕЛЬ УПРАВЛЕНИЯ (TOOLBAR)
-   ============================================ */
-
-.toolbar {
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--spacing-lg);
-}
-
-.toolbar h1 {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: var(--spacing-md);
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-}
-
-/* Сетка режимов */
-.mode-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-sm);
-}
-
-.mode-btn {
-  min-height: var(--touch-target);
-  padding: var(--spacing-md);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Ripple эффект */
-.mode-btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  transition: width var(--transition-slow), height var(--transition-slow), opacity var(--transition-slow);
-}
-
-.mode-btn:active::after {
-  width: 100px;
-  height: 100px;
-  opacity: 0.1;
-}
-
-.mode-btn.active {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.mode-btn.delete {
-  background: var(--color-danger);
-  color: white;
-  border-color: var(--color-danger);
-}
-
-/* Кнопки действий */
-.action-buttons {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-}
-
-.action-btn {
-  min-height: 40px;
-  padding: var(--spacing-md);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.action-btn:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.action-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* Кнопка очистки */
-.clear-btn {
-  width: 100%;
-  min-height: var(--touch-target);
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-md);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--color-danger);
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-
-.clear-btn:active {
-  transform: scale(0.98);
-}
-
-/* ============================================
-   5. CANVAS
-   ============================================ */
-
-.canvas-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--canvas-bg);
-  padding: var(--spacing-lg);
-  position: relative;
-}
-
-#editor-canvas {
-  background: white;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  max-width: 100%;
-  max-height: 100%;
-  cursor: crosshair;
-  touch-action: none;
-}
-
-/* ============================================
-   6. 3D ПРОСМОТР
-   ============================================ */
-
-#three-container {
-  width: 100%;
-  height: 100%;
-  cursor: grab;
-}
-
-#three-container:active {
-  cursor: grabbing;
-}
-
-/* Информационная панель в 3D */
-.viewer-info {
-  position: absolute;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius);
-  min-width: 200px;
-  box-shadow: var(--shadow-lg);
-  font-size: 13px;
-}
-
-.viewer-info h2 {
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: var(--spacing-sm);
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.viewer-info .stat {
-  display: flex;
-  justify-content: space-between;
-  margin: var(--spacing-xs) 0;
-}
-
-.viewer-info .stat label {
-  color: var(--color-text-secondary);
-}
-
-.viewer-info .stat span {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ============================================
-   7. СТАТУС БАР
-   ============================================ */
-
-.status {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border);
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-/* ============================================
-   8. МОБИЛЬНАЯ НАВИГАЦИЯ (ТАБЫ)
-   ============================================ */
 
 .tabs-container {
   display: none;
@@ -337,480 +31,513 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px var(--shadow);
   z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tabs {
   display: flex;
-  height: var(--tab-height);
+  height: 50px;
 }
 
 .tab {
   flex: 1;
+  padding: 12px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: var(--spacing-sm);
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  position: relative;
+  gap: 6px;
+  transition: all 0.2s;
+  touch-action: manipulation;
 }
 
-.tab::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 10%;
-  width: 80%;
-  height: 2px;
-  background: var(--color-primary);
-  transform: scaleX(0);
-  transition: transform var(--transition);
+.tab:not(:last-child) {
+  border-right: 1px solid var(--border);
 }
 
 .tab.active {
-  color: var(--color-primary);
-}
-
-.tab.active::before {
-  transform: scaleX(1);
+  background: var(--bg-primary);
+  color: var(--accent);
 }
 
 .tab-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
-/* ============================================
-   9. ИСТОРИЯ (ДЕСКТОП)
-   ============================================ */
-
-.history-panel {
-  position: absolute;
-  bottom: var(--spacing-lg);
-  right: var(--spacing-lg);
-  width: 400px;
-  height: 300px;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+.editor-panel {
+  width: 450px;
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+.viewer-panel {
+  flex: 1;
+  background: linear-gradient(to bottom, #e8eaf6, #c5cae9);
+  position: relative;
+  display: none;
+}
+
+.panel.active {
+  display: flex;
+}
+
+.toolbar {
+  padding: 15px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar h1 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mode-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.mode-btn {
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  font-weight: 500;
+  touch-action: manipulation;
+}
+
+.mode-btn:hover {
+  background: var(--bg-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.mode-btn.delete {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.action-btn {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  touch-action: manipulation;
+  transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.clear-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 6px;
+  background: var(--danger);
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  touch-action: manipulation;
+  transition: all 0.2s;
+}
+
+.clear-btn:hover {
+  background: #d32f2f;
+}
+
+.canvas-container {
+  flex: 1;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+#editor-canvas {
+  border: 1px solid var(--border);
+  background: white;
+  box-shadow: 0 4px 20px var(--shadow);
+  cursor: crosshair;
+  touch-action: none;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.status {
+  padding: 10px 15px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+#three-container {
+  width: 100%;
+  height: 100%;
+}
+
+.viewer-info {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255,255,255,0.95);
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  min-width: 200px;
+  max-width: 90%;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.viewer-info h2 {
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+}
+
+.viewer-info .stat {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+  color: var(--text);
+}
+
+.viewer-info .stat label {
+  color: var(--text-secondary);
+}
+
+.saved-indicator {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  background: var(--success);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+
+.saved-indicator.show {
+  opacity: 1;
+}
+
+/* История изменений */
+.history-panel {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  width: 450px;
+  height: 350px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px var(--shadow);
   z-index: 10;
+  backdrop-filter: blur(10px);
   resize: both;
   overflow: hidden;
-  min-width: 280px;
+  min-width: 300px;
   min-height: 200px;
-  transition: all var(--transition);
+  max-width: 90vw;
+  max-height: 80vh;
+  transition: height 0.3s ease;
 }
 
 .history-panel.collapsed {
-  height: 48px !important;
+  height: 45px !important;
   resize: none;
 }
 
 .history-header {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  border-radius: var(--radius) var(--radius) 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 12px 15px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
   cursor: move;
   user-select: none;
+  flex-shrink: 0;
+}
+
+.history-header:active {
+  cursor: grabbing;
 }
 
 .history-header h3 {
   font-size: 14px;
   font-weight: 600;
+  color: var(--text);
   margin: 0;
+  flex: 1;
 }
 
 .history-controls {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: 4px;
+  align-items: center;
 }
 
-.history-controls button {
-  background: transparent;
+.history-clear-btn,
+.history-collapse-btn,
+.history-copy-btn {
+  background: none;
   border: none;
-  padding: var(--spacing-sm);
   cursor: pointer;
   font-size: 14px;
-  color: var(--color-text-secondary);
-  border-radius: 6px;
-  transition: all var(--transition);
-  min-width: 32px;
-  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  line-height: 1;
 }
 
-.history-controls button:hover {
-  background: var(--color-surface);
+.history-clear-btn:hover,
+.history-collapse-btn:hover,
+.history-copy-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.history-collapse-btn {
+  font-size: 12px;
+}
+
+.history-panel.collapsed .history-content {
+  display: none;
 }
 
 .history-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-lg);
+  padding: 12px 15px;
   font-size: 12px;
+  line-height: 1.6;
 }
 
 .history-content::-webkit-scrollbar {
   width: 6px;
 }
 
+.history-content::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
 .history-content::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--border);
   border-radius: 3px;
 }
 
+.history-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
 .history-empty {
+  color: var(--text-secondary);
   text-align: center;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-xl);
+  padding: 20px;
   font-style: italic;
 }
 
 .history-entry {
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-border);
-  border-radius: 6px;
-  transition: all var(--transition);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--border);
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .history-entry:hover {
+  background: var(--bg-tertiary);
   transform: translateX(2px);
 }
 
 .history-entry.save {
-  border-left-color: var(--color-success);
+  border-left-color: var(--success);
 }
 
 .history-entry.undo {
-  border-left-color: #ffc107;
+  border-left-color: #FF9800;
 }
 
 .history-entry.redo {
-  border-left-color: var(--color-primary);
+  border-left-color: var(--accent);
 }
 
-/* ============================================
-   10. ИНДИКАТОР СОХРАНЕНИЯ
-   ============================================ */
+.history-time {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-right: 8px;
+}
 
-.saved-indicator {
-  position: absolute;
-  bottom: var(--spacing-lg);
-  right: var(--spacing-lg);
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-success);
-  color: white;
-  border-radius: var(--radius);
-  font-size: 13px;
+.history-action {
   font-weight: 600;
-  opacity: 0;
-  transition: all var(--transition);
-  box-shadow: var(--shadow-md);
+  margin-right: 4px;
 }
 
-.saved-indicator.show {
-  opacity: 1;
-  animation: slideIn 300ms ease;
+.history-details {
+  display: block;
+  margin-top: 6px;
+  padding-left: 15px;
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateY(10px);
-    opacity: 0;
+.history-change {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.history-change-value {
+  color: var(--text);
+  font-family: monospace;
+}
+
+.history-change-arrow {
+  color: var(--text-secondary);
+}
+
+.history-change-diff {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.history-change-diff.negative {
+  color: var(--danger);
+}
+
+@media (min-width: 1025px) {
+  .editor-panel, .viewer-panel {
+    display: flex !important;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+  .tabs-container {
+    display: none !important;
   }
 }
-
-/* ============================================
-   11. МОБИЛЬНАЯ АДАПТАЦИЯ
-   ============================================ */
 
 @media (max-width: 1024px) {
-  /* Скрываем десктоп панели */
-  .editor-panel,
-  .viewer-panel {
-    display: none;
-    width: 100%;
-    height: calc(100vh - var(--tab-height));
-    height: calc(100dvh - var(--tab-height));
+  body {
+    flex-direction: column;
+    padding-bottom: 50px;
   }
   
-  .editor-panel.active,
-  .viewer-panel.active {
-    display: flex;
-  }
-  
-  /* Показываем мобильную навигацию */
   .tabs-container {
     display: block;
   }
   
-  /* Canvas на весь экран */
-  .canvas-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 0;
-  }
-  
-  #editor-canvas {
-    width: 100%;
-    height: 100%;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-  
-  /* Toolbar как выдвижная панель */
-  .toolbar {
-    position: fixed;
-    bottom: var(--tab-height);
-    left: 0;
-    right: 0;
-    max-height: 70vh;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    box-shadow: var(--shadow-lg);
-    transform: translateY(calc(100% - var(--drawer-peek)));
-    transition: transform var(--transition-slow);
-    z-index: 50;
-    border-bottom: none;
-    border-top: 1px solid var(--color-border);
-    overflow-y: auto;
-  }
-  
-  /* Ручка для открытия */
-  .toolbar::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 4px;
-    background: var(--color-border);
-    border-radius: 2px;
-  }
-  
-  .toolbar h1 {
-    padding-top: 24px;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-  }
-  
-  /* Открытое состояние */
-  .toolbar.open {
-    transform: translateY(0);
-  }
-  
-  /* Статус бар сверху для мобильных */
-  .status {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: none;
-    border-bottom: 1px solid var(--color-border);
-    z-index: 45;
-  }
-  
-  /* Прячем историю на мобильных */
-  .history-panel {
+  .editor-panel, .viewer-panel {
     display: none;
+    width: 100%;
+    height: calc(100vh - 50px);
+    border: none;
   }
   
-  /* Адаптируем info панель для мобильных */
-  .viewer-info {
-    top: auto;
-    bottom: calc(var(--tab-height) + var(--spacing-md));
-    left: var(--spacing-md);
-    right: var(--spacing-md);
-    max-width: none;
+  .editor-panel.active, .viewer-panel.active {
+    display: flex;
   }
-}
-
-/* Маленькие экраны */
-@media (max-width: 640px) {
+  
+  .toolbar {
+    padding: 10px;
+  }
+  
   .toolbar h1 {
     font-size: 16px;
+    margin-bottom: 8px;
   }
   
+  .canvas-container {
+    padding: 10px;
+  }
+  
+  .history-panel {
+    position: static;
+    width: 100%;
+    height: 200px;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    resize: none;
+  }
+  
+  .history-header {
+    cursor: default;
+  }
+}
+
+@media (max-width: 768px) {
+  .toolbar h1 {
+    font-size: 14px;
+  }
   .mode-buttons {
-    gap: var(--spacing-xs);
+    gap: 6px;
   }
-  
   .mode-btn {
-    font-size: 12px;
-    padding: var(--spacing-sm);
-  }
-  
-  .action-btn {
+    padding: 10px 6px;
     font-size: 11px;
   }
-}
-
-/* ============================================
-   12. УТИЛИТЫ
-   ============================================ */
-
-/* Отключение анимаций для a11y */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Поддержка высокого контраста */
-@media (prefers-contrast: high) {
-  :root {
-    --color-border: #000000;
-    --shadow-sm: 0 0 0 1px #000000;
-    --shadow-md: 0 0 0 2px #000000;
-    --shadow-lg: 0 0 0 3px #000000;
-  }
-}
-
-/* Touch оптимизация */
-@media (hover: none) and (pointer: coarse) {
-  .mode-btn:hover,
-  .action-btn:hover {
-    background: inherit;
-  }
-  
-  .mode-btn:active,
-  .action-btn:active {
-    background: var(--color-surface);
-  }
-}
-
-/* Скрытие элементов */
-.hidden {
-  display: none !important;
-}
-
-/* Плавное появление */
-.fade-in {
-  animation: fadeIn 200ms ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ============================================
-   13. ДОПОЛНИТЕЛЬНЫЕ КОМПОНЕНТЫ
-   ============================================ */
-
-/* Floating Action Button (опционально) */
-.fab {
-  display: none;
-  position: fixed;
-  bottom: calc(var(--tab-height) + 70px);
-  right: var(--spacing-lg);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  box-shadow: var(--shadow-lg);
-  font-size: 28px;
-  cursor: pointer;
-  z-index: 40;
-  transition: all var(--transition);
-}
-
-@media (max-width: 1024px) {
-  .fab {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .fab:active {
-    transform: scale(0.9);
-  }
-}
-
-/* Tooltips (для десктопа) */
-@media (hover: hover) {
-  [data-tooltip] {
-    position: relative;
-  }
-  
-  [data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--color-text);
-    color: var(--color-bg);
+  .tab {
     font-size: 11px;
-    border-radius: 6px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--transition);
-    margin-bottom: var(--spacing-xs);
   }
-  
-  [data-tooltip]:hover::after {
-    opacity: 1;
+  .tab-icon {
+    font-size: 16px;
   }
-}
-
-/* Loading состояние */
-.loading {
-  position: relative;
-  pointer-events: none;
-  opacity: 0.6;
-}
-
-.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
-  border: 2px solid var(--color-primary);
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 600ms linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }

@@ -40,12 +40,6 @@
 
   <div class="viewer-panel panel" id="viewer-panel">
     <div id="three-container"></div>
-
-    <button class="info-toggle" onclick="
-      document.querySelector('.viewer-info').classList.toggle('hidden');
-      this.innerHTML = document.querySelector('.viewer-info').classList.contains('hidden') ? 'ℹ️' : '✕';
-    ">ℹ️</button>
-    
     <div class="viewer-info">
       <h2>🗄️ Шкаф</h2>
       <div class="stat">
@@ -68,7 +62,6 @@
         <label>Разделителей:</label>
         <span id="stat-dividers">0</span>
       </div>
-      
     </div>
     <div class="saved-indicator" id="saved-indicator">✓ Сохранено</div>
     
