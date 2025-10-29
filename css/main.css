@@ -103,6 +103,13 @@ body {
   position: relative;
 }
 
+.menu-panel {
+  width: 100%;
+  background: var(--bg-secondary);
+  flex-direction: column;
+}
+
+
 /* ============================================
    EDITOR HEADER (MINIMAL)
    ============================================ */
@@ -499,6 +506,91 @@ body {
 .tab.active .tab-icon {
   opacity: 1;
   transform: scale(1.08);
+}
+
+/* Tab-action - не переключается, только действие */
+.tab.tab-action::before {
+  display: none;
+}
+
+.tab.tab-action.active {
+  color: var(--text-tertiary);
+}
+
+
+/* ============================================
+   MENU STYLES
+   ============================================ */
+
+.menu-header {
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  padding-top: calc(env(safe-area-inset-top) + var(--space-5));
+  background: var(--bg-secondary);
+  border-bottom: 0.5px solid var(--border);
+}
+
+.menu-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--text-primary);
+}
+
+.menu-content {
+  flex: 1;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-6) + 64px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.menu-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+  min-height: 88px;
+  text-align: left;
+}
+
+.menu-card:active {
+  transform: scale(0.98);
+  background: var(--bg-elevated);
+}
+
+.menu-card-icon {
+  font-size: 32px;
+  margin-bottom: var(--space-1);
+}
+
+.menu-card-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.menu-card-subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: -0.1px;
+  line-height: 1.3;
 }
 
 /* ============================================

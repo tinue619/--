@@ -134,6 +134,47 @@
       </div>
     </div>
   </div>
+
+  <!-- ПАНЕЛЬ МЕНЮ -->
+  <div class="menu-panel panel" id="menu-panel">
+    <div class="menu-header">
+      <h1>Меню</h1>
+    </div>
+    
+    <div class="menu-content">
+      <div class="menu-grid">
+        
+        <!-- Карточка: История -->
+        <button class="menu-card" data-sheet="history-sheet">
+          <div class="menu-card-icon">📝</div>
+          <div class="menu-card-title">История</div>
+          <div class="menu-card-subtitle">Журнал изменений</div>
+        </button>
+        
+        <!-- Карточка: Спецификация -->
+        <button class="menu-card" data-sheet="spec-sheet">
+          <div class="menu-card-icon">📋</div>
+          <div class="menu-card-title">Спецификация</div>
+          <div class="menu-card-subtitle">Список деталей</div>
+        </button>
+        
+        <!-- Карточка: Настройки шкафа -->
+        <button class="menu-card" data-sheet="cabinet-settings-sheet">
+          <div class="menu-card-icon">⚙️</div>
+          <div class="menu-card-title">Размеры</div>
+          <div class="menu-card-subtitle">Настройка шкафа</div>
+        </button>
+        
+        <!-- Карточка: Экспорт -->
+        <button class="menu-card" data-sheet="export-sheet">
+          <div class="menu-card-icon">📤</div>
+          <div class="menu-card-title">Экспорт</div>
+          <div class="menu-card-subtitle">Сохранить проект</div>
+        </button>
+        
+      </div>
+    </div>
+  </div>
   
   <!-- Нижняя навигация (табы) -->
   <div class="tabs-container">
@@ -146,9 +187,9 @@
         <span class="tab-icon">👁️</span>
         <span>3D Вид</span>
       </button>
-      <button class="tab" id="open-history-sheet">
-        <span class="tab-icon">📝</span>
-        <span>История</span>
+      <button class="tab" data-panel="menu-panel">
+        <span class="tab-icon">☰</span>
+        <span>Меню</span>
       </button>
     </div>
   </div>
@@ -163,7 +204,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-header">
       <h2 class="sheet-title">История изменений</h2>
-      <button class="sheet-close" id="close-history-sheet">✕</button>
+      <button class="sheet-close">✕</button>
     </div>
     <div class="sheet-content">
       <div class="history-list" id="history-list"></div>
@@ -187,15 +228,56 @@
     </div>
   </div>
 
+  <!-- Sheet: Спецификация -->
+  <div class="bottom-sheet" id="spec-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2 class="sheet-title">Спецификация деталей</h2>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-content">
+      <div style="padding: var(--space-4); text-align: center; color: var(--text-tertiary);">
+        <p>Функция в разработке</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sheet: Настройки шкафа -->
+  <div class="bottom-sheet" id="cabinet-settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2 class="sheet-title">Размеры шкафа</h2>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-content">
+      <div style="padding: var(--space-4); text-align: center; color: var(--text-tertiary);">
+        <p>Функция в разработке</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sheet: Экспорт -->
+  <div class="bottom-sheet" id="export-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2 class="sheet-title">Экспорт проекта</h2>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-content">
+      <div style="padding: var(--space-4); text-align: center; color: var(--text-tertiary);">
+        <p>Функция в разработке</p>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
   
   <!-- Sheet & Tools Management -->
   <script>
     // ========== BOTTOM SHEETS ==========
     const backdrop = document.getElementById('sheet-backdrop');
-    const historySheet = document.getElementById('history-sheet');
-    const openHistoryBtn = document.getElementById('open-history-sheet');
-    const closeHistoryBtn = document.getElementById('close-history-sheet');
+    const sheets = document.querySelectorAll('.bottom-sheet');
+    const closeButtons = document.querySelectorAll('.sheet-close');
     
     let currentSheet = null;
     
@@ -219,8 +301,14 @@
       document.body.style.overflow = '';
     }
     
-    openHistoryBtn?.addEventListener('click', () => openSheet(historySheet));
-    closeHistoryBtn?.addEventListener('click', () => closeSheet(historySheet));
+    // Закрытие по кнопке X
+    closeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (currentSheet) closeSheet(currentSheet);
+      });
+    });
+    
+    // Закрытие по backdrop
     backdrop.addEventListener('click', () => {
       if (currentSheet) closeSheet(currentSheet);
     });
@@ -229,7 +317,7 @@
     let startY = 0;
     let currentY = 0;
     
-    document.querySelectorAll('.bottom-sheet').forEach(sheet => {
+    sheets.forEach(sheet => {
       const handle = sheet.querySelector('.sheet-handle');
       
       handle.addEventListener('touchstart', (e) => {
@@ -253,6 +341,17 @@
       }, { passive: true });
     });
     
+    // Открытие sheets из карточек меню
+    document.querySelectorAll('.menu-card[data-sheet]').forEach(card => {
+      card.addEventListener('click', () => {
+        const sheetId = card.dataset.sheet;
+        const sheet = document.getElementById(sheetId);
+        if (sheet) {
+          openSheet(sheet);
+        }
+      });
+    });
+    
     // История - кнопки
     document.getElementById('copy-history-sheet')?.addEventListener('click', () => {
       document.getElementById('copy-history-btn')?.click();
@@ -260,7 +359,7 @@
     
     document.getElementById('clear-history-sheet')?.addEventListener('click', () => {
       document.getElementById('clear-history-btn')?.click();
-      closeSheet(historySheet);
+      if (currentSheet) closeSheet(currentSheet);
     });
     
     // Синхронизация истории
@@ -337,14 +436,6 @@
         clearTool.style.transform = '';
       }, 150);
     });
-    
-    // Smooth scroll для tools panel
-    const toolsScroll = document.querySelector('.tools-scroll');
-    if (toolsScroll) {
-      toolsScroll.addEventListener('scroll', () => {
-        // Можно добавить индикатор прокрутки или snap
-      });
-    }
   </script>
 </body>
 </html>
