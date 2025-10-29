@@ -264,13 +264,20 @@
       <button class="sheet-close">✕</button>
     </div>
     <div class="sheet-content">
-      <div style="padding: var(--space-4); text-align: center; color: var(--text-tertiary);">
-        <p>Функция в разработке</p>
+      <div style="padding: var(--space-4);">
+        <button class="sheet-item" id="export-json-btn" style="width: 100%;">
+          <div class="sheet-item-icon">💾</div>
+          <div class="sheet-item-content">
+            <div class="sheet-item-title">Экспорт деталей в JSON</div>
+            <div class="sheet-item-subtitle">Сохранить спецификацию</div>
+          </div>
+        </button>
       </div>
     </div>
   </div>
 
   <script type="module" src="js/main.js"></script>
+  <script src="js/exportJSON.js"></script>
   
   <!-- Sheet & Tools Management -->
   <script>
@@ -495,6 +502,15 @@
     // Обновляем спецификацию при открытии sheet
     document.querySelector('[data-sheet="spec-sheet"]')?.addEventListener('click', () => {
       setTimeout(updateSpecification, 100);
+    });
+    
+    // Экспорт в JSON
+    document.getElementById('export-json-btn')?.addEventListener('click', () => {
+      if (window.exportPanelsToJSON) {
+        window.exportPanelsToJSON();
+      } else {
+        alert('Функция экспорта не загружена');
+      }
     });
   </script>
 </body>
