@@ -79,9 +79,14 @@ body {
   color: var(--text-primary);
   display: flex;
   height: 100vh;
+  height: 100dvh; /* Динамическая высота viewport для мобильных */
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   touch-action: none;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
 }
 
 /* ============================================
@@ -204,13 +209,13 @@ body {
 .tools-panel {
   background: var(--bg-primary);
   border-top: 0.5px solid var(--border);
-  padding: var(--space-3) 0;
+  padding: var(--space-2) 0;
   overflow: hidden;
 }
 
 .tools-scroll {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: 0 var(--space-4);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -224,8 +229,8 @@ body {
 
 .tool-card {
   flex-shrink: 0;
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-elevated);
@@ -234,7 +239,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   transition: all var(--transition-fast);
   scroll-snap-align: center;
   position: relative;
@@ -268,7 +273,7 @@ body {
 }
 
 .tool-icon {
-  font-size: 36px;
+  font-size: 28px;
   transition: transform var(--transition-fast);
 }
 
@@ -278,7 +283,7 @@ body {
 }
 
 .tool-name {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: -0.1px;
@@ -800,9 +805,10 @@ body {
   .editor-panel,
   .viewer-panel,
   .menu-panel {
-    /* Вычитаем высоту табов из 100vh */
-    height: calc(100vh - var(--tabs-total-height));
-    max-height: calc(100vh - var(--tabs-total-height));
+    /* Вычитаем высоту табов из 100dvh */
+    height: calc(100dvh - var(--tabs-total-height));
+    max-height: calc(100dvh - var(--tabs-total-height));
+    overflow: hidden;
   }
   
   .editor-header h1 {
