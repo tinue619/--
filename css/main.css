@@ -908,3 +908,39 @@ body {
 .sheet-content::-webkit-scrollbar-thumb:hover {
   background: var(--border-medium);
 }
+
+/* ============================================
+   SPECIFICATION TABLE
+   ============================================ */
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-family: var(--font-mono);
+}
+
+.spec-table thead {
+  background: var(--bg-elevated);
+}
+
+.spec-table th {
+  padding: var(--space-3) var(--space-2);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spec-table td {
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 0.5px solid var(--border-light);
+  color: var(--text-primary);
+}
+
+.spec-table tbody tr:hover {
+  background: var(--bg-elevated);
+}
