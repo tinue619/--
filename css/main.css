@@ -209,7 +209,7 @@ body {
 .tools-panel {
   background: var(--bg-primary);
   border-top: 0.5px solid var(--border);
-  padding: var(--space-2) 0;
+  padding: var(--space-4) 0;
   overflow: hidden;
 }
 
