@@ -13,56 +13,86 @@ function exportPanelsToJSON() {
   const allPanels = [
     { 
       name: 'Левая боковина',
+      nameEn: 'Left_Side',
       type: 'left-side', 
       x: 0, 
-      y: 0, 
+      y: 0,
+      z: 3,
       width: 16, 
       height: cab.height,
+      depth: cab.depth - 3,
       thickness: 16
     },
     { 
       name: 'Правая боковина',
+      nameEn: 'Right_Side',
       type: 'right-side', 
       x: cab.width - 16, 
-      y: 0, 
+      y: 0,
+      z: 3,
       width: 16, 
       height: cab.height,
+      depth: cab.depth - 3,
       thickness: 16
     },
     { 
       name: 'Дно',
+      nameEn: 'Bottom',
       type: 'bottom', 
       x: 16, 
-      y: 0, 
+      y: cab.base - 16,
+      z: 3,
       width: cab.width - 32, 
       height: 16,
+      depth: cab.depth - 3,
       thickness: 16
     },
     { 
       name: 'Крыша',
+      nameEn: 'Top',
       type: 'top', 
       x: 16, 
-      y: cab.height - 16, 
+      y: cab.height - 16,
+      z: 3,
       width: cab.width - 32, 
       height: 16,
+      depth: cab.depth - 3,
       thickness: 16
     },
     {
+      name: 'Задняя стенка ХДФ',
+      nameEn: 'Back_HDF',
+      type: 'back-hdf',
+      x: 1,
+      y: cab.base + 1,
+      z: 0,
+      width: cab.width - 2,
+      height: cab.height - cab.base - 2,
+      depth: 3,
+      thickness: 3
+    },
+    {
       name: 'Передняя планка цоколя',
+      nameEn: 'Front_Plinth',
       type: 'front-plinth',
       x: 16,
       y: 0,
+      z: cab.depth - 16 - 1,
       width: cab.width - 32,
-      height: 100,
+      height: cab.base - 16,
+      depth: 16,
       thickness: 16
     },
     {
       name: 'Задняя планка цоколя',
+      nameEn: 'Back_Plinth',
       type: 'back-plinth',
       x: 16,
       y: 0,
+      z: 0 + 30 + 16,
       width: cab.width - 32,
-      height: 100,
+      height: cab.base - 16,
+      depth: 16,
       thickness: 16
     }
   ];
@@ -73,34 +103,56 @@ function exportPanelsToJSON() {
 
   Array.from(app.panels.values()).forEach(p => {
     let name = p.type;
+    let panelData = {};
     
     if (p.type === 'shelf') {
       name = `Полка ${shelfIndex++}`;
+      // Горизонтальная панель
+      panelData = {
+        name: name,
+        nameEn: `Shelf_${shelfIndex - 1}`,
+        type: p.type,
+        x: Math.round(p.bounds.startX),
+        y: Math.round(p.position.y),
+        z: 3,
+        width: Math.round(p.bounds.endX - p.bounds.startX),
+        height: 16,
+        depth: cab.depth - 3,
+        thickness: 16
+      };
     } else if (p.type === 'divider') {
       name = `Разделитель ${dividerIndex++}`;
+      // Вертикальная панель
+      panelData = {
+        name: name,
+        nameEn: `Divider_${dividerIndex - 1}`,
+        type: p.type,
+        x: Math.round(p.position.x),
+        y: Math.round(p.bounds.startY),
+        z: 3,
+        width: 16,
+        height: Math.round(p.bounds.endY - p.bounds.startY),
+        depth: cab.depth - 3,
+        thickness: 16
+      };
     }
 
-    allPanels.push({
-      name: name,
-      type: p.type,
-      x: Math.round(p.position.x),
-      y: Math.round(p.position.y),
-      width: Math.round(p.bounds.width),
-      height: Math.round(p.bounds.height),
-      thickness: 16
-    });
+    allPanels.push(panelData);
     
     // Добавляем рёбра жёсткости для полок
     if (p.type === 'shelf' && p.ribs && p.ribs.length > 0) {
       p.ribs.forEach((rib, index) => {
         allPanels.push({
           name: `Ребро для ${name} #${index + 1}`,
+          nameEn: `Rib_${panelData.nameEn}_${index + 1}`,
           type: 'rib',
           x: Math.round(rib.startX),
-          y: Math.round(p.position.y),
+          y: Math.round(p.position.y) - 100,
+          z: 3,
           width: Math.round(rib.endX - rib.startX),
-          height: 16, // CONFIG.RIB.HEIGHT
-          thickness: 120 // CONFIG.RIB.DEPTH
+          height: 100,
+          depth: 16,
+          thickness: 16
         });
       });
     }

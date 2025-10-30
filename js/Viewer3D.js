@@ -152,41 +152,53 @@ export class Viewer3D {
     cabinet.add(top);
     
     // Цоколь - две планки (передняя и задняя)
-    const plinthHeight = 100; // Высота цоколя
-    const plinthThickness = 16; // Толщина планки цоколя
+    const plinthHeight = base - CONFIG.DSP; // Высота цоколя
+    const plinthThickness = CONFIG.DSP; // Толщина планки цоколя
     
     // Передняя планка цоколя
+    // z = depth - 16 - 1 (в экспорте)
+    // Для 3D: -depth/2 + (depth - 16 - 1) + plinthThickness/2
     const frontPlinthGeom = new THREE.BoxGeometry(
       innerWidth,
       plinthHeight,
       plinthThickness
     );
     const frontPlinth = new THREE.Mesh(frontPlinthGeom, this.materials.plinth);
-    frontPlinth.position.set(0, plinthHeight/2, depth/2 - plinthThickness/2);
+    frontPlinth.position.set(
+      0, 
+      plinthHeight/2, 
+      -depth/2 + (depth - CONFIG.DSP - 1) + plinthThickness/2
+    );
     frontPlinth.castShadow = true;
     frontPlinth.receiveShadow = true;
     cabinet.add(frontPlinth);
     
     // Задняя планка цоколя
+    // z = 0 + 30 + 16 = 46 (в экспорте)
+    // Для 3D: -depth/2 + 46 + plinthThickness/2
     const backPlinthGeom = new THREE.BoxGeometry(
       innerWidth,
       plinthHeight,
       plinthThickness
     );
     const backPlinth = new THREE.Mesh(backPlinthGeom, this.materials.plinth);
-    backPlinth.position.set(0, plinthHeight/2, -depth/2 + CONFIG.HDF + plinthThickness/2);
+    backPlinth.position.set(
+      0, 
+      plinthHeight/2, 
+      -depth/2 + 30 + CONFIG.DSP + plinthThickness/2
+    );
     backPlinth.castShadow = true;
     backPlinth.receiveShadow = true;
     cabinet.add(backPlinth);
     
-    // Задняя стенка
+    // Задняя стенка ХДФ
     const backGeom = new THREE.BoxGeometry(
       width - 2,
-      height - 2,
+      height - base - 2,
       CONFIG.HDF
     );
     const back = new THREE.Mesh(backGeom, this.materials.hdf);
-    back.position.set(0, height/2, -depth/2 + CONFIG.HDF/2);
+    back.position.set(0, base + (height - base) / 2 + 1, -depth/2 + CONFIG.HDF/2);
     cabinet.add(back);
     
     this.scene.add(cabinet);

@@ -74,8 +74,8 @@ export function updateMesh(app, panel) {
       const ribMesh = new THREE.Mesh(ribGeom, app.viewer3D.materials.rib);
       
       // Позиционируем ребро под полкой в правильном пролете
-      // Y: прижато к низу полки (без зазора)
-      // Z: у задней стенки (cabDepth - hdfThick)
+      // Y: на 100мм ниже полки
+      // Z: z = 3 (в экспорте), для 3D: -depth/2 + 3 + CONFIG.RIB.DEPTH/2
       ribMesh.position.set(
         (rib.startX + rib.endX) / 2 - app.cabinet.width / 2,
         panel.position.y - CONFIG.RIB.HEIGHT/2,
