@@ -83,7 +83,7 @@ function exportPanelsToJSON() {
       rank: 1,  // Крепится к боковинам
       x: 16,
       y: 0,
-      z: cab.depth - 16 - 1,
+      z: cab.depth - 16 - 2,  // Утоплен на 2мм от передней грани
       width: cab.width - 32,
       height: cab.base - 16,
       depth: 16,  // Цоколь всегда 16мм глубиной

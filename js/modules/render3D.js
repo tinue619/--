@@ -35,13 +35,22 @@ export function updateMesh(app, panel) {
   if (!mesh) {
     const geom = new THREE.BoxGeometry(geometry.width, geometry.height, geometry.depth);
     mesh = new THREE.Mesh(geom, app.viewer3D.materials.dsp);
+    app.viewer3D.addEdgesToMesh(mesh);  // Добавляем рёбра
     app.viewer3D.dynamicGroup.add(mesh);
     app.mesh3D.set(panel.id, mesh);
   } else {
     const params = mesh.geometry.parameters;
     if (params.width !== geometry.width || params.height !== geometry.height) {
+      // Удаляем старые рёбра
+      const oldEdges = mesh.children.find(child => child.type === 'LineSegments');
+      if (oldEdges) {
+        mesh.remove(oldEdges);
+        oldEdges.geometry.dispose();
+      }
+      
       mesh.geometry.dispose();
       mesh.geometry = new THREE.BoxGeometry(geometry.width, geometry.height, geometry.depth);
+      app.viewer3D.addEdgesToMesh(mesh);  // Добавляем новые рёбра
     }
   }
   
@@ -72,6 +81,7 @@ export function updateMesh(app, panel) {
         CONFIG.RIB.DEPTH
       );
       const ribMesh = new THREE.Mesh(ribGeom, app.viewer3D.materials.rib);
+      app.viewer3D.addEdgesToMesh(ribMesh);  // Добавляем рёбра
       
       // Позиционируем ребро под полкой в правильном пролете
       // Y: на 100мм ниже полки

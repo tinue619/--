@@ -63,14 +63,18 @@ export class Viewer3D {
         color: CONFIG.COLORS.RIB,
         roughness: 0.8,
         metalness: 0.2
+      }),
+      edge: new THREE.LineBasicMaterial({ 
+        color: 0x333333,
+        linewidth: 1
       })
     };
     
     // Освещение
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);  // Увеличили с 0.6 до 0.8
     this.scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);  // Увеличили с 0.8 до 1.0
     directionalLight.position.set(500, 1000, 500);
     directionalLight.castShadow = true;
     directionalLight.shadow.camera.near = 100;
@@ -80,6 +84,16 @@ export class Viewer3D {
     directionalLight.shadow.camera.top = 2000;
     directionalLight.shadow.camera.bottom = -2000;
     this.scene.add(directionalLight);
+    
+    // Дополнительный свет спереди
+    const frontLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    frontLight.position.set(0, 500, 1000);
+    this.scene.add(frontLight);
+    
+    // Заполняющий свет сбоку
+    const sideLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    sideLight.position.set(-1000, 500, 0);
+    this.scene.add(sideLight);
     
     // Сетка
     const grid = new THREE.GridHelper(3000, 30, 0x888888, 0xcccccc);
@@ -128,12 +142,14 @@ export class Viewer3D {
     leftSide.position.set(-width/2 + CONFIG.DSP/2, height/2, CONFIG.HDF/2);
     leftSide.castShadow = true;
     leftSide.receiveShadow = true;
+    this.addEdgesToMesh(leftSide);
     cabinet.add(leftSide);
     
     const rightSide = new THREE.Mesh(sideGeom, this.materials.dsp);
     rightSide.position.set(width/2 - CONFIG.DSP/2, height/2, CONFIG.HDF/2);
     rightSide.castShadow = true;
     rightSide.receiveShadow = true;
+    this.addEdgesToMesh(rightSide);
     cabinet.add(rightSide);
     
     // Дно
@@ -142,6 +158,7 @@ export class Viewer3D {
     bottom.position.set(0, base - CONFIG.DSP/2, CONFIG.HDF/2);
     bottom.castShadow = true;
     bottom.receiveShadow = true;
+    this.addEdgesToMesh(bottom);
     cabinet.add(bottom);
     
     // Крыша
@@ -149,6 +166,7 @@ export class Viewer3D {
     top.position.set(0, height - CONFIG.DSP/2, CONFIG.HDF/2);
     top.castShadow = true;
     top.receiveShadow = true;
+    this.addEdgesToMesh(top);
     cabinet.add(top);
     
     // Цоколь - две планки (передняя и задняя)
@@ -156,8 +174,8 @@ export class Viewer3D {
     const plinthThickness = CONFIG.DSP; // Толщина планки цоколя
     
     // Передняя планка цоколя
-    // z = depth - 16 - 1 (в экспорте)
-    // Для 3D: -depth/2 + (depth - 16 - 1) + plinthThickness/2
+    // z = depth - 16 - 2 (в экспорте) - утоплен на 2мм
+    // Для 3D: -depth/2 + (depth - 16 - 2) + plinthThickness/2
     const frontPlinthGeom = new THREE.BoxGeometry(
       innerWidth,
       plinthHeight,
@@ -167,10 +185,11 @@ export class Viewer3D {
     frontPlinth.position.set(
       0, 
       plinthHeight/2, 
-      -depth/2 + (depth - CONFIG.DSP - 1) + plinthThickness/2
+      -depth/2 + (depth - CONFIG.DSP - 2) + plinthThickness/2
     );
     frontPlinth.castShadow = true;
     frontPlinth.receiveShadow = true;
+    this.addEdgesToMesh(frontPlinth);
     cabinet.add(frontPlinth);
     
     // Задняя планка цоколя
@@ -189,6 +208,7 @@ export class Viewer3D {
     );
     backPlinth.castShadow = true;
     backPlinth.receiveShadow = true;
+    this.addEdgesToMesh(backPlinth);
     cabinet.add(backPlinth);
     
     // Задняя стенка ХДФ
@@ -199,6 +219,7 @@ export class Viewer3D {
     );
     const back = new THREE.Mesh(backGeom, this.materials.hdf);
     back.position.set(0, base + (height - base) / 2 + 1, -depth/2 + CONFIG.HDF/2);
+    this.addEdgesToMesh(back);
     cabinet.add(back);
     
     this.scene.add(cabinet);
@@ -209,6 +230,14 @@ export class Viewer3D {
     this.createCabinet();
     // Обновляем точку фокуса камеры
     this.controls.target.set(0, this.app.cabinet.height / 2, 0);
+  }
+  
+  // Добавляет рёбра (edges) к мешу для лучшей визуализации
+  addEdgesToMesh(mesh) {
+    const edges = new THREE.EdgesGeometry(mesh.geometry);
+    const line = new THREE.LineSegments(edges, this.materials.edge);
+    mesh.add(line);
+    return line;
   }
   
   animate() {
