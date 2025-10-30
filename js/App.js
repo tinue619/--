@@ -850,8 +850,8 @@ export class App {
         panel.connections.left = panel.connections.right;
         panel.connections.right = tempLeft;
       } else {
-        // Разделитель: зеркалим position.x
-        panel.position.x = width - panel.position.x;
+        // Разделитель: position.x это ЛЕВЫЙ край, зеркалим правый край
+        panel.position.x = width - (panel.position.x + CONFIG.DSP);
       }
     }
     
