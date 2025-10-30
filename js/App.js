@@ -74,6 +74,28 @@ export class App {
       workHeight: this.cabinet.height - this.cabinet.base - CONFIG.DSP
     };
   }
+
+  // ========== РАСЧЁТ РАНГА ПАНЕЛИ ==========
+  // Ранг определяет порядок сборки и глубину утопления панели
+  // Не хранится в Panel, вычисляется на лету по connections
+  calculatePanelRank(panel) {
+    // Фиксированные ранги
+    if (panel.type === 'back') return -1;  // ХДФ задняя стенка
+    if (panel.type === 'left' || panel.type === 'right') return 0;  // Боковины - база
+    if (panel.type === 'bottom' || panel.type === 'top' || 
+        panel.type === 'plinth' || panel.type === 'upperPlinth') return 1;  // Крепятся к боковинам
+    
+    // Динамический расчёт для полок и разделителей
+    // Ранг = максимальный ранг родителей + 1
+    let maxRank = 0;
+    for (let parent of Object.values(panel.connections)) {
+      if (parent && parent.type) {  // parent - это объект Panel, не ID
+        const parentRank = this.calculatePanelRank(parent);  // Рекурсивно
+        maxRank = Math.max(maxRank, parentRank);
+      }
+    }
+    return maxRank + 1;
+  }
   
   // ========== ИНИЦИАЛИЗАЦИЯ ==========
   init() {

@@ -14,7 +14,8 @@ function exportPanelsToJSON() {
     { 
       name: 'Левая боковина',
       nameEn: 'Left_Side',
-      type: 'left-side', 
+      type: 'left-side',
+      rank: 0,  // Базовая панель
       x: 0, 
       y: 0,
       z: 3,
@@ -26,7 +27,8 @@ function exportPanelsToJSON() {
     { 
       name: 'Правая боковина',
       nameEn: 'Right_Side',
-      type: 'right-side', 
+      type: 'right-side',
+      rank: 0,  // Базовая панель
       x: cab.width - 16, 
       y: 0,
       z: 3,
@@ -38,31 +40,34 @@ function exportPanelsToJSON() {
     { 
       name: 'Дно',
       nameEn: 'Bottom',
-      type: 'bottom', 
+      type: 'bottom',
+      rank: 1,  // Крепится к боковинам
       x: 16, 
       y: cab.base - 16,
       z: 3,
       width: cab.width - 32, 
       height: 16,
-      depth: cab.depth - 3,
+      depth: cab.depth - 3 - 1,  // (cabDepth - 3) - rank = 597 - 1 = 596
       thickness: 16
     },
     { 
       name: 'Крыша',
       nameEn: 'Top',
-      type: 'top', 
+      type: 'top',
+      rank: 1,  // Крепится к боковинам
       x: 16, 
       y: cab.height - 16,
       z: 3,
       width: cab.width - 32, 
       height: 16,
-      depth: cab.depth - 3,
+      depth: cab.depth - 3 - 1,  // (cabDepth - 3) - rank = 597 - 1 = 596
       thickness: 16
     },
     {
       name: 'Задняя стенка ХДФ',
       nameEn: 'Back_HDF',
       type: 'back-hdf',
+      rank: -1,  // ХДФ - самая задняя
       x: 1,
       y: cab.base + 1,
       z: 0,
@@ -75,24 +80,26 @@ function exportPanelsToJSON() {
       name: 'Передняя планка цоколя',
       nameEn: 'Front_Plinth',
       type: 'front-plinth',
+      rank: 1,  // Крепится к боковинам
       x: 16,
       y: 0,
       z: cab.depth - 16 - 1,
       width: cab.width - 32,
       height: cab.base - 16,
-      depth: 16,
+      depth: 16,  // Цоколь всегда 16мм глубиной
       thickness: 16
     },
     {
       name: 'Задняя планка цоколя',
       nameEn: 'Back_Plinth',
       type: 'back-plinth',
+      rank: 1,  // Крепится к боковинам
       x: 16,
       y: 0,
       z: 0 + 30 + 16,
       width: cab.width - 32,
       height: cab.base - 16,
-      depth: 16,
+      depth: 16,  // Цоколь всегда 16мм глубиной
       thickness: 16
     }
   ];
@@ -105,6 +112,10 @@ function exportPanelsToJSON() {
     let name = p.type;
     let panelData = {};
     
+    // Вычисляем rank для каждой панели
+    const rank = app.calculatePanelRank(p);
+    const depth = (cab.depth - 3) - rank;  // Глубина с учётом утопления
+    
     if (p.type === 'shelf') {
       name = `Полка ${shelfIndex++}`;
       // Горизонтальная панель
@@ -112,12 +123,13 @@ function exportPanelsToJSON() {
         name: name,
         nameEn: `Shelf_${shelfIndex - 1}`,
         type: p.type,
+        rank: rank,
         x: Math.round(p.bounds.startX),
         y: Math.round(p.position.y),
         z: 3,
         width: Math.round(p.bounds.endX - p.bounds.startX),
         height: 16,
-        depth: cab.depth - 3,
+        depth: depth,
         thickness: 16
       };
     } else if (p.type === 'divider') {
@@ -127,12 +139,13 @@ function exportPanelsToJSON() {
         name: name,
         nameEn: `Divider_${dividerIndex - 1}`,
         type: p.type,
+        rank: rank,
         x: Math.round(p.position.x),
         y: Math.round(p.bounds.startY),
         z: 3,
         width: 16,
         height: Math.round(p.bounds.endY - p.bounds.startY),
-        depth: cab.depth - 3,
+        depth: depth,
         thickness: 16
       };
     }
@@ -146,6 +159,7 @@ function exportPanelsToJSON() {
           name: `Ребро для ${name} #${index + 1}`,
           nameEn: `Rib_${panelData.nameEn}_${index + 1}`,
           type: 'rib',
+          rank: rank,  // Рёбра наследуют rank полки
           x: Math.round(rib.startX),
           y: Math.round(p.position.y) - 100,
           z: 3,

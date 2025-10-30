@@ -80,20 +80,28 @@ export class Panel {
     return position >= this.start && position <= this.end;
   }
 
-  getGeometry(cabinetDepth) {
-    const innerDepth = cabinetDepth - CONFIG.HDF;
+  getGeometry(cabinetDepth, app) {
+    // Вычисляем rank и глубину с учётом утопления
+    let depth;
+    if (app) {
+      const rank = app.calculatePanelRank(this);
+      depth = (cabinetDepth - CONFIG.HDF) - rank;
+    } else {
+      // Fallback если app не передан
+      depth = cabinetDepth - CONFIG.HDF;
+    }
     
     if (this.isHorizontal) {
       return { 
         width: this.size, 
         height: CONFIG.DSP, 
-        depth: innerDepth 
+        depth: depth 
       };
     } else {
       return { 
         width: CONFIG.DSP, 
         height: this.size, 
-        depth: innerDepth 
+        depth: depth 
       };
     }
   }

@@ -30,7 +30,7 @@ export function updateMesh(app, panel) {
   if (!app.viewer3D) return;
   
   let mesh = app.mesh3D.get(panel.id);
-  const geometry = panel.getGeometry(app.cabinet.depth);
+  const geometry = panel.getGeometry(app.cabinet.depth, app);  // Передаём app для расчёта rank
   
   if (!mesh) {
     const geom = new THREE.BoxGeometry(geometry.width, geometry.height, geometry.depth);
