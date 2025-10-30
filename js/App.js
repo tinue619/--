@@ -132,6 +132,7 @@ export class App {
     );
     
     addListener('.clear-btn', 'click', () => this.clearAll());
+    addListener('#mirror-btn', 'click', () => this.mirrorContent());
     addListener('#undo-btn', 'click', () => this.undo());
     addListener('#redo-btn', 'click', () => this.redo());
     addListener('#clear-history-btn', 'click', () => clearHistoryLog());
@@ -823,6 +824,48 @@ export class App {
     this.saveHistory();
     render2D(this);
     this.updateStats();
+  }
+  
+  // ========== ОТЗЕРКАЛИВАНИЕ ==========
+  mirrorContent() {
+    if (this.panels.size === 0) {
+      this.updateStatus('Нет элементов для отзеркаливания');
+      return;
+    }
+    
+    const width = this.cabinet.width;
+    
+    // Отзеркаливаем все панели
+    for (let panel of this.panels.values()) {
+      if (panel.isHorizontal) {
+        // Полка: зеркалим bounds.startX и bounds.endX
+        const oldStartX = panel.bounds.startX;
+        const oldEndX = panel.bounds.endX;
+        
+        panel.bounds.startX = width - oldEndX;
+        panel.bounds.endX = width - oldStartX;
+        
+        // Меняем местами left и right connections
+        const tempLeft = panel.connections.left;
+        panel.connections.left = panel.connections.right;
+        panel.connections.right = tempLeft;
+      } else {
+        // Разделитель: зеркалим position.x
+        panel.position.x = width - panel.position.x;
+      }
+    }
+    
+    // Обновляем рёбра жёсткости для всех полок
+    for (let panel of this.panels.values()) {
+      if (panel.isHorizontal) {
+        panel.updateRibs(this.panels, this.cabinet.width);
+      }
+    }
+    
+    this.saveHistory();
+    render2D(this);
+    renderAll3D(this);
+    this.updateStatus('Содержимое отзеркалено');
   }
   
   // ========== СЕРИАЛИЗАЦИЯ CONNECTIONS ==========
