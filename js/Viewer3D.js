@@ -214,11 +214,12 @@ export class Viewer3D {
     // Задняя стенка ХДФ
     const backGeom = new THREE.BoxGeometry(
       width - 2,
-      height - base - 2,
+      height - base + 14,  // +16мм чтобы зайти под крышу (-2 + 16 = +14)
       CONFIG.HDF
     );
     const back = new THREE.Mesh(backGeom, this.materials.hdf);
-    back.position.set(0, base + (height - base) / 2 + 1, -depth/2 + CONFIG.HDF/2);
+    // y = (cab.base - 15) + height/2 = base - 15 + (height-base+14)/2
+    back.position.set(0, base - 15 + (height - base + 14) / 2, -depth/2 + CONFIG.HDF/2);
     this.addEdgesToMesh(back);
     cabinet.add(back);
     

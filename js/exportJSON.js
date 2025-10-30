@@ -69,10 +69,10 @@ function exportPanelsToJSON() {
       type: 'back-hdf',
       rank: -1,  // ХДФ - самая задняя
       x: 1,
-      y: cab.base + 1,
+      y: cab.base - 15,  // Опущена на 16мм (cab.base + 1 - 16 = cab.base - 15)
       z: 0,
       width: cab.width - 2,
-      height: cab.height - cab.base - 2,
+      height: cab.height - cab.base + 14,  // +16мм чтобы зайти под крышу (-2 + 16 = +14)
       depth: 3,
       thickness: 3
     },
