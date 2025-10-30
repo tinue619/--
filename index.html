@@ -457,15 +457,32 @@
         { type: 'left-side', x: 0, y: 0, width: 16, height: cab.height },
         { type: 'right-side', x: cab.width - 16, y: 0, width: 16, height: cab.height },
         { type: 'bottom', x: 16, y: 0, width: cab.width - 32, height: 16 },
-        { type: 'top', x: 16, y: cab.height - 16, width: cab.width - 32, height: 16 },
-        ...Array.from(app.panels.values()).map(p => ({
+        { type: 'top', x: 16, y: cab.height - 16, width: cab.width - 32, height: 16 }
+      ];
+      
+      // Добавляем пользовательские панели
+      Array.from(app.panels.values()).forEach(p => {
+        allPanels.push({
           type: p.type,
           x: p.position.x,
           y: p.position.y,
           width: p.bounds.width,
           height: p.bounds.height
-        }))
-      ];
+        });
+        
+        // Добавляем рёбра жёсткости
+        if (p.type === 'shelf' && p.ribs && p.ribs.length > 0) {
+          p.ribs.forEach(rib => {
+            allPanels.push({
+              type: 'rib',
+              x: rib.startX,
+              y: p.position.y,
+              width: rib.endX - rib.startX,
+              height: 16
+            });
+          });
+        }
+      });
       
       if (allPanels.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-tertiary); padding: var(--space-6);"><p>Нет панелей</p></div>';

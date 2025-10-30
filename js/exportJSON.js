@@ -52,7 +52,6 @@ function exportPanelsToJSON() {
   // Добавляем пользовательские панели
   let shelfIndex = 1;
   let dividerIndex = 1;
-  let ribIndex = 1;
 
   Array.from(app.panels.values()).forEach(p => {
     let name = p.type;
@@ -61,8 +60,6 @@ function exportPanelsToJSON() {
       name = `Полка ${shelfIndex++}`;
     } else if (p.type === 'divider') {
       name = `Разделитель ${dividerIndex++}`;
-    } else if (p.type === 'rib') {
-      name = `Ребро ${ribIndex++}`;
     }
 
     allPanels.push({
@@ -74,6 +71,21 @@ function exportPanelsToJSON() {
       height: Math.round(p.bounds.height),
       thickness: 16
     });
+    
+    // Добавляем рёбра жёсткости для полок
+    if (p.type === 'shelf' && p.ribs && p.ribs.length > 0) {
+      p.ribs.forEach((rib, index) => {
+        allPanels.push({
+          name: `Ребро для ${name} #${index + 1}`,
+          type: 'rib',
+          x: Math.round(rib.startX),
+          y: Math.round(p.position.y),
+          width: Math.round(rib.endX - rib.startX),
+          height: 16, // CONFIG.RIB.HEIGHT
+          thickness: 120 // CONFIG.RIB.DEPTH
+        });
+      });
+    }
   });
 
   // Формируем JSON
