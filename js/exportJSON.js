@@ -46,6 +46,24 @@ function exportPanelsToJSON() {
       width: cab.width - 32, 
       height: 16,
       thickness: 16
+    },
+    {
+      name: 'Передняя планка цоколя',
+      type: 'front-plinth',
+      x: 16,
+      y: 0,
+      width: cab.width - 32,
+      height: 100,
+      thickness: 16
+    },
+    {
+      name: 'Задняя планка цоколя',
+      type: 'back-plinth',
+      x: 16,
+      y: 0,
+      width: cab.width - 32,
+      height: 100,
+      thickness: 16
     }
   ];
 

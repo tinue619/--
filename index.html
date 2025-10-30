@@ -457,7 +457,9 @@
         { type: 'left-side', x: 0, y: 0, width: 16, height: cab.height },
         { type: 'right-side', x: cab.width - 16, y: 0, width: 16, height: cab.height },
         { type: 'bottom', x: 16, y: 0, width: cab.width - 32, height: 16 },
-        { type: 'top', x: 16, y: cab.height - 16, width: cab.width - 32, height: 16 }
+        { type: 'top', x: 16, y: cab.height - 16, width: cab.width - 32, height: 16 },
+        { type: 'front-plinth', x: 16, y: 0, width: cab.width - 32, height: 100 },
+        { type: 'back-plinth', x: 16, y: 0, width: cab.width - 32, height: 100 }
       ];
       
       // Добавляем пользовательские панели
@@ -499,7 +501,9 @@
           'top': 'Крыша',
           'shelf': 'Полка',
           'divider': 'Разделитель',
-          'rib': 'Ребро'
+          'rib': 'Ребро',
+          'front-plinth': 'Передняя планка цоколя',
+          'back-plinth': 'Задняя планка цоколя'
         };
         
         html += `<tr>

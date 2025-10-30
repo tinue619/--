@@ -151,16 +151,33 @@ export class Viewer3D {
     top.receiveShadow = true;
     cabinet.add(top);
     
-    // Цоколь
-    const plinthGeom = new THREE.BoxGeometry(
+    // Цоколь - две планки (передняя и задняя)
+    const plinthHeight = 100; // Высота цоколя
+    const plinthThickness = 16; // Толщина планки цоколя
+    
+    // Передняя планка цоколя
+    const frontPlinthGeom = new THREE.BoxGeometry(
       innerWidth,
-      base - CONFIG.DSP,
-      innerDepth
+      plinthHeight,
+      plinthThickness
     );
-    const plinth = new THREE.Mesh(plinthGeom, this.materials.plinth);
-    plinth.position.set(0, (base - CONFIG.DSP)/2, CONFIG.HDF/2);
-    plinth.castShadow = true;
-    cabinet.add(plinth);
+    const frontPlinth = new THREE.Mesh(frontPlinthGeom, this.materials.plinth);
+    frontPlinth.position.set(0, plinthHeight/2, depth/2 - plinthThickness/2);
+    frontPlinth.castShadow = true;
+    frontPlinth.receiveShadow = true;
+    cabinet.add(frontPlinth);
+    
+    // Задняя планка цоколя
+    const backPlinthGeom = new THREE.BoxGeometry(
+      innerWidth,
+      plinthHeight,
+      plinthThickness
+    );
+    const backPlinth = new THREE.Mesh(backPlinthGeom, this.materials.plinth);
+    backPlinth.position.set(0, plinthHeight/2, -depth/2 + CONFIG.HDF + plinthThickness/2);
+    backPlinth.castShadow = true;
+    backPlinth.receiveShadow = true;
+    cabinet.add(backPlinth);
     
     // Задняя стенка
     const backGeom = new THREE.BoxGeometry(
