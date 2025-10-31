@@ -1167,4 +1167,18 @@ export class App {
     document.getElementById('stat-height').textContent = `${Math.round(this.cabinet.height)} мм`;
     document.getElementById('stat-depth').textContent = `${Math.round(this.cabinet.depth)} мм`;
   }
+  
+  // ========== 3D МЕТОДЫ ==========
+  // Обертки для функций из render3D.js
+  updateMesh(panel) {
+    updateMesh(this, panel);
+  }
+  
+  renderAll3D() {
+    renderAll3D(this);
+  }
+  
+  removeMesh(panel) {
+    removeMesh(this, panel);
+  }
 }

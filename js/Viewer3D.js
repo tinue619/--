@@ -254,4 +254,19 @@ export class Viewer3D {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
   }
+  
+  // Устанавливает фронтальный вид камеры
+  setFrontView() {
+    const cabinet = this.app.cabinet;
+    const distance = Math.max(cabinet.width, cabinet.height) * 1.5;
+    
+    // Позиция камеры спереди
+    this.camera.position.set(0, cabinet.height / 2, distance);
+    
+    // Направляем камеру на центр шкафа
+    this.controls.target.set(0, cabinet.height / 2, 0);
+    
+    // Обновляем контролы
+    this.controls.update();
+  }
 }

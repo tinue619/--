@@ -92,7 +92,23 @@
 
   <!-- ПАНЕЛЬ 3D ПРОСМОТРА -->
   <div class="viewer-panel panel" id="viewer-panel">
+    
     <div id="three-container"></div>
+    
+    <!-- Горизонтальная панель инструментов 3D -->
+    <div class="tools-panel">
+      <div class="tools-scroll">
+        <button class="tool-card" id="front-view-btn">
+          <div class="tool-icon">🎯</div>
+          <div class="tool-name">Фронт</div>
+        </button>
+        
+        <button class="tool-card" id="depth-btn">
+          <div class="tool-icon">↔️</div>
+          <div class="tool-name">Глубина</div>
+        </button>
+      </div>
+    </div>
     
     <!-- Информация о шкафе (скрыта) -->
     <div class="viewer-info" style="display: none;">
@@ -123,6 +139,7 @@
     <div class="saved-indicator" id="saved-indicator">
       ✓ Сохранено
     </div>
+    
     
     <!-- Скрытая панель истории для совместимости -->
     <div class="history-panel" id="history-panel" style="display: none;">
@@ -281,11 +298,117 @@
     </div>
   </div>
 
+  <!-- Sheet: Глубина шкафа -->
+  <div class="bottom-sheet" id="depth-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h2 class="sheet-title">Глубина шкафа</h2>
+      <button class="sheet-close">✕</button>
+    </div>
+    <div class="sheet-content">
+      <div style="padding: var(--space-4);">
+        <div style="margin-bottom: var(--space-4);">
+          <label style="display: block; margin-bottom: var(--space-2); color: var(--text-secondary); font-size: 14px;">
+            Текущая глубина: <span id="current-depth-value" style="color: var(--text-primary); font-weight: 600;">600 мм</span>
+          </label>
+          <input 
+            type="range" 
+            id="depth-slider" 
+            min="300" 
+            max="800" 
+            step="50" 
+            value="600"
+            style="width: 100%; height: 40px; cursor: pointer;"
+          >
+          <div style="display: flex; justify-content: space-between; margin-top: var(--space-2); font-size: 12px; color: var(--text-tertiary);">
+            <span>300 мм</span>
+            <span>800 мм</span>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2);">
+          <button class="depth-preset-btn" data-depth="450">450</button>
+          <button class="depth-preset-btn" data-depth="550">550</button>
+          <button class="depth-preset-btn" data-depth="600">600</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
   <script src="js/exportJSON.js"></script>
   
   <!-- Sheet & Tools Management -->
   <script>
+    // ========== 3D VIEWER CONTROLS ==========
+    document.getElementById('front-view-btn')?.addEventListener('click', () => {
+      if (window.cabinetApp && window.cabinetApp.viewer3D) {
+        window.cabinetApp.viewer3D.setFrontView();
+      }
+    });
+    
+    // Открытие depth sheet
+    document.getElementById('depth-btn')?.addEventListener('click', () => {
+      const sheet = document.getElementById('depth-sheet');
+      if (sheet && window.cabinetApp) {
+        // Обновляем текущее значение
+        const currentDepth = window.cabinetApp.cabinet.depth;
+        document.getElementById('depth-slider').value = currentDepth;
+        document.getElementById('current-depth-value').textContent = currentDepth + ' мм';
+        openSheet(sheet);
+      }
+    });
+    
+    // Изменение глубины через слайдер
+    document.getElementById('depth-slider')?.addEventListener('input', (e) => {
+      const newDepth = parseInt(e.target.value);
+      document.getElementById('current-depth-value').textContent = newDepth + ' мм';
+    });
+    
+    document.getElementById('depth-slider')?.addEventListener('change', (e) => {
+      const newDepth = parseInt(e.target.value);
+      if (window.cabinetApp) {
+        updateCabinetDepth(newDepth);
+      }
+    });
+    
+    // Пресеты глубины
+    document.querySelectorAll('.depth-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const depth = parseInt(btn.dataset.depth);
+        document.getElementById('depth-slider').value = depth;
+        document.getElementById('current-depth-value').textContent = depth + ' мм';
+        if (window.cabinetApp) {
+          updateCabinetDepth(depth);
+        }
+      });
+    });
+    
+    // Функция обновления глубины
+    function updateCabinetDepth(newDepth) {
+      const app = window.cabinetApp;
+      if (!app) return;
+      
+      // Обновляем глубину
+      app.cabinet.depth = newDepth;
+      app.updateCalc();
+      
+      // Перестраиваем 3D корпус
+      if (app.viewer3D) {
+        app.viewer3D.rebuildCabinet();
+      }
+      
+      // Перерисовываем все 3D панели
+      for (let panel of app.panels.values()) {
+        app.updateMesh(panel);
+      }
+      
+      // Логируем
+      if (app.logToHistory) {
+        app.logToHistory(`Глубина изменена на ${newDepth}мм`);
+      }
+    }
+    
     // ========== BOTTOM SHEETS ==========
     const backdrop = document.getElementById('sheet-backdrop');
     const sheets = document.querySelectorAll('.bottom-sheet');

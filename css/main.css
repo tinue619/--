@@ -955,3 +955,28 @@ body {
 .spec-table tbody tr:hover {
   background: var(--bg-elevated);
 }
+
+/* ============================================
+   DEPTH ADJUSTMENT
+   ============================================ */
+
+.depth-preset-btn {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+
+.depth-preset-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-medium);
+}
+
+.depth-preset-btn:active {
+  transform: scale(0.95);
+}
