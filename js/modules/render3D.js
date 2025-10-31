@@ -40,7 +40,7 @@ export function updateMesh(app, panel) {
     app.mesh3D.set(panel.id, mesh);
   } else {
     const params = mesh.geometry.parameters;
-    if (params.width !== geometry.width || params.height !== geometry.height) {
+    if (params.width !== geometry.width || params.height !== geometry.height || params.depth !== geometry.depth) {
       // Удаляем старые рёбра
       const oldEdges = mesh.children.find(child => child.type === 'LineSegments');
       if (oldEdges) {
