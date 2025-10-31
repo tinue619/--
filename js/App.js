@@ -346,6 +346,34 @@ export class App {
       };
     }
     
+    // Дно (управляет высотой цоколя)
+    if (Math.abs(coords.y - (this.cabinet.base - CONFIG.DSP/2)) < CONFIG.UI.SNAP && 
+        coords.x >= CONFIG.DSP && coords.x <= this.cabinet.width - CONFIG.DSP) {
+      return {
+        type: 'horizontal-side',
+        id: 'bottom-side',
+        position: { y: this.cabinet.base - CONFIG.DSP/2 },
+        isHorizontal: true,
+        mainPosition: this.cabinet.base - CONFIG.DSP/2,
+        start: CONFIG.DSP,
+        end: this.cabinet.width - CONFIG.DSP
+      };
+    }
+    
+    // Крыша (управляет общей высотой шкафа)
+    if (Math.abs(coords.y - (this.cabinet.height - CONFIG.DSP/2)) < CONFIG.UI.SNAP && 
+        coords.x >= CONFIG.DSP && coords.x <= this.cabinet.width - CONFIG.DSP) {
+      return {
+        type: 'horizontal-side',
+        id: 'top-side',
+        position: { y: this.cabinet.height - CONFIG.DSP/2 },
+        isHorizontal: true,
+        mainPosition: this.cabinet.height - CONFIG.DSP/2,
+        start: CONFIG.DSP,
+        end: this.cabinet.width - CONFIG.DSP
+      };
+    }
+    
     // Затем проверяем обычные панели
     for (let panel of this.panels.values()) {
       const axis = panel.isHorizontal ? 'y' : 'x';
@@ -470,6 +498,12 @@ export class App {
     // Особая обработка для боковин
     if (panel.type === 'side') {
       this.moveSide(panel, coords.x);
+      return;
+    }
+    
+    // Особая обработка для дна и крыши
+    if (panel.type === 'horizontal-side') {
+      this.moveHorizontalSide(panel, coords.y);
       return;
     }
     
@@ -607,6 +641,131 @@ export class App {
           panel.bounds.endX = this.cabinet.width - CONFIG.DSP;
         }
         // Обновляем ребра жесткости
+        panel.updateRibs(this.panels, this.cabinet.width);
+      }
+    }
+    
+    // Обновляем отображение
+    this.updateCanvas();
+    render2D(this);
+    
+    // Обновляем 3D корпус
+    if (this.viewer3D) {
+      this.viewer3D.rebuildCabinet();
+    }
+    
+    renderAll3D(this);
+    
+    // Обновляем информацию о размерах шкафа
+    this.updateCabinetInfo();
+  }
+  
+  // ========== ПЕРЕМЕЩЕНИЕ ДНА И КРЫШИ ==========
+  moveHorizontalSide(side, newY) {
+    const isBottom = side.id === 'bottom-side';
+    
+    if (isBottom) {
+      // ========== ДВИЖЕНИЕ ДНА ==========
+      // Дно управляет высотой цоколя (base)
+      const MIN_BASE_HEIGHT = 60;  // Минимальная высота цоколя 60мм
+      
+      // Находим ограничения
+      let minBase = MIN_BASE_HEIGHT;  // Минимальная высота цоколя
+      let maxBase = this.cabinet.height - CONFIG.DSP - CONFIG.MIN_SIZE;  // Максимум ограничен рабочей высотой
+      
+      // Ограничиваем самой нижней полкой
+      for (let panel of this.panels.values()) {
+        if (panel.isHorizontal) {
+          const minPossibleBase = panel.position.y - CONFIG.MIN_GAP - CONFIG.DSP;
+          if (minPossibleBase < maxBase) {
+            maxBase = minPossibleBase;
+          }
+        }
+      }
+      
+      // newY это центр дна, преобразуем в base (верх дна = base)
+      const requestedBase = newY + CONFIG.DSP/2;
+      const oldBase = this.cabinet.base;
+      const newBase = Math.max(minBase, Math.min(maxBase, requestedBase));
+      
+      // Рассчитываем сдвиг
+      const delta = newBase - oldBase;
+      
+      if (delta === 0) return;  // Ничего не изменилось
+      
+      // Обновляем высоту цоколя
+      this.cabinet.base = newBase;
+      
+      // ВАЖНО: При движении дна разделители РАСТЯГИВАЮТСЯ/СЖИМАЮТСЯ снизу!
+      // Их верх остается на месте (привязан к полкам), низ двигается с дном
+      // Полки остаются на своих абсолютных Y координатах
+      for (let panel of this.panels.values()) {
+        if (!panel.isHorizontal) {
+          // Разделители: только startY двигается (низ), endY остается на месте
+          if (!panel.connections.bottom) {
+            // Если разделитель не упирается в полку снизу, его низ = base
+            panel.bounds.startY = this.cabinet.base;
+          } else {
+            // Если упирается в полку снизу, сдвигаем на delta
+            panel.bounds.startY += delta;
+          }
+          // Пересчитываем position (центр)
+          panel.position.y = (panel.bounds.startY + panel.bounds.endY) / 2;
+          // Обновляем 3D mesh для разделителя
+          updateMesh(this, panel);
+        }
+        // Полки НЕ трогаем - они остаются на тех же абсолютных координатах
+      }
+      
+    } else {
+      // ========== ДВИЖЕНИЕ КРЫШИ ==========
+      // Крыша управляет общей высотой шкафа (height)
+      // Находим ограничения
+      let minHeight = this.cabinet.base + CONFIG.MIN_SIZE + CONFIG.DSP;  // Минимальная рабочая высота
+      let maxHeight = 3000;  // Максимальная разумная высота
+      
+      // Ограничиваем самой верхней полкой - крыша НЕ МОЖЕТ пройти сквозь полки
+      for (let panel of this.panels.values()) {
+        if (panel.isHorizontal) {
+          const minPossibleHeight = panel.position.y + CONFIG.DSP + CONFIG.MIN_GAP;
+          if (minPossibleHeight > minHeight) {
+            minHeight = minPossibleHeight;  // Крыша должна быть выше самой верхней полки
+          }
+        }
+      }
+      
+      // newY это центр крыши, преобразуем в height (низ крыши = height - DSP)
+      const requestedHeight = newY + CONFIG.DSP/2;
+      const oldHeight = this.cabinet.height;
+      const newHeight = Math.max(minHeight, Math.min(maxHeight, requestedHeight));
+      
+      if (newHeight === oldHeight) return;  // Ничего не изменилось
+      
+      // Обновляем высоту шкафа
+      this.cabinet.height = newHeight;
+      
+      // Обновляем endY всех разделителей, которые упираются в крышу
+      for (let panel of this.panels.values()) {
+        if (!panel.isHorizontal) {
+          // Если разделитель не упирается в полку сверху, растягиваем его до крыши
+          if (!panel.connections.top) {
+            panel.bounds.endY = this.cabinet.height - CONFIG.DSP;
+            // ВАЖНО: Обновляем position разделителя (центр)
+            panel.position.y = (panel.bounds.startY + panel.bounds.endY) / 2;
+            // Обновляем 3D mesh для разделителя
+            updateMesh(this, panel);
+          }
+        }
+      }
+    }
+    
+    // Обновляем вычисляемые размеры
+    this.updateCalc();
+    
+    // Обновляем полки, которые зависят от изменившихся границ
+    for (let panel of this.panels.values()) {
+      if (panel.isHorizontal) {
+        // Обновляем ребра жесткости для всех полок
         panel.updateRibs(this.panels, this.cabinet.width);
       }
     }
