@@ -582,39 +582,45 @@
       
       // Собираем все панели: структурные + пользовательские
       const allPanels = [
-        { type: 'left-side', x: 0, y: 0, z: 3, width: 16, height: cab.height, depth: cab.depth - 3, thickness: 16 },
-        { type: 'right-side', x: cab.width - 16, y: 0, z: 3, width: 16, height: cab.height, depth: cab.depth - 3, thickness: 16 },
-        { type: 'bottom', x: 16, y: cab.base - 16, z: 3, width: cab.width - 32, height: 16, depth: cab.depth - 3, thickness: 16 },
-        { type: 'top', x: 16, y: cab.height - 16, z: 3, width: cab.width - 32, height: 16, depth: cab.depth - 3, thickness: 16 },
-        { type: 'back-hdf', x: 1, y: cab.base + 1, z: 0, width: cab.width - 2, height: cab.height - cab.base - 2, depth: 3, thickness: 3 },
-        { type: 'front-plinth', x: 16, y: 0, z: cab.depth - 16 - 1, width: cab.width - 32, height: cab.base - 16, depth: 16, thickness: 16 },
-        { type: 'back-plinth', x: 16, y: 0, z: 0 + 30 + 16, width: cab.width - 32, height: cab.base - 16, depth: 16, thickness: 16 }
+        { type: 'left-side', rank: 0, x: 0, y: 0, z: 3, width: 16, height: cab.height, depth: cab.depth - 3, thickness: 16 },
+        { type: 'right-side', rank: 0, x: cab.width - 16, y: 0, z: 3, width: 16, height: cab.height, depth: cab.depth - 3, thickness: 16 },
+        { type: 'bottom', rank: 1, x: 16, y: cab.base - 16, z: 3, width: cab.width - 32, height: 16, depth: (cab.depth - 3) - 1, thickness: 16 },
+        { type: 'top', rank: 1, x: 16, y: cab.height - 16, z: 3, width: cab.width - 32, height: 16, depth: (cab.depth - 3) - 1, thickness: 16 },
+        { type: 'back-hdf', rank: -1, x: 1, y: cab.base + 1, z: 0, width: cab.width - 2, height: cab.height - cab.base - 2, depth: 3, thickness: 3 },
+        { type: 'front-plinth', rank: 1, x: 16, y: 0, z: cab.depth - 16 - 1, width: cab.width - 32, height: cab.base - 16, depth: 16, thickness: 16 },
+        { type: 'back-plinth', rank: 1, x: 16, y: 0, z: 0 + 30 + 16, width: cab.width - 32, height: cab.base - 16, depth: 16, thickness: 16 }
       ];
       
       // Добавляем пользовательские панели
       Array.from(app.panels.values()).forEach(p => {
+        // Вычисляем rank для каждой панели
+        const rank = app.calculatePanelRank(p);
+        const depth = (cab.depth - 3) - rank;  // Глубина с учётом утопления
+        
         // Для горизонтальных панелей (полок)
         if (p.isHorizontal) {
           allPanels.push({
             type: p.type,
+            rank: rank,
             x: p.bounds.startX,
             y: p.position.y,
             z: 3,
             width: p.bounds.endX - p.bounds.startX,
             height: 16,
-            depth: cab.depth - 3,
+            depth: depth,
             thickness: 16
           });
         } else {
           // Для вертикальных панелей (разделителей)
           allPanels.push({
             type: p.type,
+            rank: rank,
             x: p.position.x,
             y: p.bounds.startY,
             z: 3,
             width: 16,
             height: p.bounds.endY - p.bounds.startY,
-            depth: cab.depth - 3,
+            depth: depth,
             thickness: 16
           });
         }
@@ -624,6 +630,7 @@
           p.ribs.forEach(rib => {
             allPanels.push({
               type: 'rib',
+              rank: rank,
               x: rib.startX,
               y: p.position.y - 100,
               z: 3,
@@ -641,7 +648,7 @@
         return;
       }
       
-      let html = '<table class="spec-table"><thead><tr><th>№</th><th>Тип</th><th>X</th><th>Y</th><th>Z</th><th>Ширина</th><th>Высота</th><th>Глубина</th><th>Толщина</th></tr></thead><tbody>';
+      let html = '<table class="spec-table"><thead><tr><th>№</th><th>Тип</th><th>Rank</th><th>X</th><th>Y</th><th>Z</th><th>Ширина</th><th>Высота</th><th>Глубина</th><th>Толщина</th></tr></thead><tbody>';
       
       allPanels.forEach((panel, index) => {
         const typeNames = {
@@ -660,6 +667,7 @@
         html += `<tr>
           <td>${index + 1}</td>
           <td>${typeNames[panel.type] || panel.type}</td>
+          <td>${panel.rank !== undefined ? panel.rank : '-'}</td>
           <td>${Math.round(panel.x)} мм</td>
           <td>${Math.round(panel.y)} мм</td>
           <td>${panel.z !== undefined ? Math.round(panel.z) + ' мм' : '-'}</td>
