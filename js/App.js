@@ -705,9 +705,6 @@ export class App {
           if (!panel.connections.bottom) {
             // Если разделитель не упирается в полку снизу, его низ = base
             panel.bounds.startY = this.cabinet.base;
-          } else {
-            // Если упирается в полку снизу, сдвигаем на delta
-            panel.bounds.startY += delta;
           }
           // Пересчитываем position (центр)
           panel.position.y = (panel.bounds.startY + panel.bounds.endY) / 2;
