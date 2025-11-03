@@ -21,6 +21,11 @@ export function renderAll3D(app) {
   for (let panel of app.panels.values()) {
     updateMesh(app, panel);
   }
+  
+  // Отрисовываем ящики
+  for (let drawer of app.drawers.values()) {
+    updateDrawerMeshes(app, drawer);
+  }
 }
 
 /**
@@ -124,4 +129,86 @@ export function removeMesh(app, panel) {
       }
     }
   }
+}
+
+/**
+ * Обновление 3D meshes для ящика
+ */
+export function updateDrawerMeshes(app, drawer) {
+  if (!app.viewer3D || !drawer.parts) return;
+  
+  const parts = ['front', 'leftSide', 'rightSide', 'back', 'bottom'];
+  
+  parts.forEach(partName => {
+    const part = drawer.parts[partName];
+    const meshId = `${drawer.id}-${partName}`;
+    
+    let mesh = app.mesh3D.get(meshId);
+    
+    if (!mesh) {
+      // Создаем новый mesh
+      const geom = new THREE.BoxGeometry(part.width, part.height, part.depth);
+      
+      // Материал в зависимости от части
+      let material;
+      if (partName === 'front') {
+        material = new THREE.MeshPhongMaterial({ 
+          color: CONFIG.COLORS.DRAWER_FRONT,
+          shininess: 30 
+        });
+      } else {
+        material = new THREE.MeshPhongMaterial({ 
+          color: CONFIG.COLORS.DRAWER_SIDE,
+          shininess: 10
+        });
+      }
+      
+      mesh = new THREE.Mesh(geom, material);
+      app.viewer3D.addEdgesToMesh(mesh);
+      app.viewer3D.dynamicGroup.add(mesh);
+      app.mesh3D.set(meshId, mesh);
+    } else {
+      // Обновляем геометрию если изменились размеры
+      const params = mesh.geometry.parameters;
+      if (params.width !== part.width || params.height !== part.height || params.depth !== part.depth) {
+        const oldEdges = mesh.children.find(child => child.type === 'LineSegments');
+        if (oldEdges) {
+          mesh.remove(oldEdges);
+          oldEdges.geometry.dispose();
+        }
+        
+        mesh.geometry.dispose();
+        mesh.geometry = new THREE.BoxGeometry(part.width, part.height, part.depth);
+        app.viewer3D.addEdgesToMesh(mesh);
+      }
+    }
+    
+    // Позиция в 3D пространстве (центрированное на 0,0,0)
+    mesh.position.set(
+      part.position.x - app.cabinet.width / 2,
+      part.position.y,
+      part.position.z - app.cabinet.depth / 2
+    );
+  });
+}
+
+/**
+ * Удаление 3D meshes ящика
+ */
+export function removeDrawerMeshes(app, drawer) {
+  if (!app.viewer3D) return;
+  
+  const parts = ['front', 'leftSide', 'rightSide', 'back', 'bottom'];
+  
+  parts.forEach(partName => {
+    const meshId = `${drawer.id}-${partName}`;
+    const mesh = app.mesh3D.get(meshId);
+    
+    if (mesh) {
+      app.viewer3D.dynamicGroup.remove(mesh);
+      mesh.geometry.dispose();
+      if (mesh.material) mesh.material.dispose();
+      app.mesh3D.delete(meshId);
+    }
+  });
 }

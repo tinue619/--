@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONFIG, CALC } from './config.js';
 import { Panel } from './Panel.js';
+import { Drawer } from './Drawer.js';
 import { Viewer3D } from './Viewer3D.js';
 
 // Импорты модулей
@@ -33,7 +34,9 @@ export class App {
     // Состояние
     this.mode = 'shelf';
     this.panels = new Map();
+    this.drawers = new Map();  // Ящики
     this.nextId = 0;
+    this.nextDrawerId = 0;
     
     // Взаимодействие
     this.interaction = {
@@ -164,6 +167,7 @@ export class App {
     const messages = {
       shelf: 'Режим: Добавление полки',
       divider: 'Режим: Добавление разделителя',
+      drawer: 'Режим: Добавление ящика',
       move: 'Режим: Перемещение',
       delete: 'Режим: Удаление'
     };
@@ -295,6 +299,8 @@ export class App {
         this.addPanel('shelf', coords.y, coords.x);
       } else if (this.mode === 'divider') {
         this.addPanel('divider', coords.x, coords.y);
+      } else if (this.mode === 'drawer') {
+        this.addDrawer(coords);
       }
     }
     
@@ -1322,6 +1328,117 @@ export class App {
     document.getElementById('stat-width').textContent = `${Math.round(this.cabinet.width)} мм`;
     document.getElementById('stat-height').textContent = `${Math.round(this.cabinet.height)} мм`;
     document.getElementById('stat-depth').textContent = `${Math.round(this.cabinet.depth)} мм`;
+  }
+  
+  // ========== ЯЩИКИ ==========
+  addDrawer(coords) {
+    // Найдем 4 панели, которые ограничивают область клика
+    let bottomShelf = null, topShelf = null, leftDivider = null, rightDivider = null;
+    
+    // Находим полки снизу и сверху
+    for (let panel of this.panels.values()) {
+      if (!panel.isHorizontal) continue;
+      
+      // Проверяем, что клик в горизонтальных границах полки
+      if (coords.x >= panel.bounds.startX && coords.x <= panel.bounds.endX) {
+        if (panel.position.y <= coords.y) {
+          if (!bottomShelf || panel.position.y > bottomShelf.position.y) {
+            bottomShelf = panel;
+          }
+        } else {
+          if (!topShelf || panel.position.y < topShelf.position.y) {
+            topShelf = panel;
+          }
+        }
+      }
+    }
+    
+    // Находим разделители слева и справа
+    for (let panel of this.panels.values()) {
+      if (panel.isHorizontal) continue;
+      
+      // Проверяем, что клик в вертикальных границах разделителя
+      if (coords.y >= panel.bounds.startY && coords.y <= panel.bounds.endY) {
+        if (panel.position.x <= coords.x) {
+          if (!leftDivider || panel.position.x > leftDivider.position.x) {
+            leftDivider = panel;
+          }
+        } else {
+          if (!rightDivider || panel.position.x < rightDivider.position.x) {
+            rightDivider = panel;
+          }
+        }
+      }
+    }
+    
+    // Если не нашли полки - используем дно/крышу
+    if (!bottomShelf) {
+      // Создаем виртуальную панель для дна
+      bottomShelf = {
+        type: 'bottom',
+        id: 'virtual-bottom',
+        position: { y: this.cabinet.base - CONFIG.DSP/2 },
+        bounds: { startX: CONFIG.DSP, endX: this.cabinet.width - CONFIG.DSP },
+        connections: {},
+        isHorizontal: true
+      };
+    }
+    
+    if (!topShelf) {
+      // Создаем виртуальную панель для крыши
+      topShelf = {
+        type: 'top',
+        id: 'virtual-top',
+        position: { y: this.cabinet.height - CONFIG.DSP/2 },
+        bounds: { startX: CONFIG.DSP, endX: this.cabinet.width - CONFIG.DSP },
+        connections: {},
+        isHorizontal: true
+      };
+    }
+    
+    if (!leftDivider) {
+      // Создаем виртуальную панель для левой боковины
+      leftDivider = {
+        type: 'left',
+        id: 'virtual-left',
+        position: { x: CONFIG.DSP/2 },
+        bounds: { startY: 0, endY: this.cabinet.height },
+        connections: {},
+        isHorizontal: false
+      };
+    }
+    
+    if (!rightDivider) {
+      // Создаем виртуальную панель для правой боковины
+      rightDivider = {
+        type: 'right',
+        id: 'virtual-right',
+        position: { x: this.cabinet.width - CONFIG.DSP/2 },
+        bounds: { startY: 0, endY: this.cabinet.height },
+        connections: {},
+        isHorizontal: false
+      };
+    }
+    
+    // Создаем ящик
+    const id = `drawer-${this.nextDrawerId++}`;
+    const connections = { bottomShelf, topShelf, leftDivider, rightDivider };
+    const drawer = new Drawer(id, connections);
+    
+    // Рассчитываем части ящика
+    const success = drawer.calculateParts(this);
+    
+    if (!success) {
+      this.updateStatus('Не удалось создать ящик - слишком маленькая область (мин. 270мм глубина)');
+      return;
+    }
+    
+    this.drawers.set(id, drawer);
+    
+    this.saveHistory();
+    render2D(this);
+    renderAll3D(this);
+    this.updateStats();
   }
   
   // ========== 3D МЕТОДЫ ==========

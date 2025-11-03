@@ -91,5 +91,31 @@ export function render2D(app) {
     }
   }
   
+  // Ящики - отрисовываем только фасад
+  for (let drawer of app.drawers.values()) {
+    if (!drawer.parts) continue;
+    
+    const front = drawer.parts.front;
+    
+    // Белый прямоугольник фасада
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(
+      front.bounds.x1 * scale,
+      toY(front.bounds.y2),
+      (front.bounds.x2 - front.bounds.x1) * scale,
+      (front.bounds.y2 - front.bounds.y1) * scale
+    );
+    
+    // Черная рамка вокруг фасада
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      front.bounds.x1 * scale,
+      toY(front.bounds.y2),
+      (front.bounds.x2 - front.bounds.x1) * scale,
+      (front.bounds.y2 - front.bounds.y1) * scale
+    );
+  }
+  
   ctx.restore();
 }
