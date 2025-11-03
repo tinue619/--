@@ -1269,10 +1269,19 @@ export class App {
       if (data.panels) {
         // Сначала создаем все панели без connections
         data.panels.forEach(panelData => {
+          // Округляем координаты при загрузке старых данных
+          const position = {};
+          if (panelData.position.x !== undefined) {
+            position.x = Math.round(panelData.position.x);
+          }
+          if (panelData.position.y !== undefined) {
+            position.y = Math.round(panelData.position.y);
+          }
+          
           const panel = new Panel(
             panelData.type,
             panelData.id,
-            panelData.position,
+            position,
             panelData.bounds,
             {}
           );

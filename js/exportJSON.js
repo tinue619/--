@@ -107,6 +107,7 @@ function exportPanelsToJSON() {
   // Добавляем пользовательские панели
   let shelfIndex = 1;
   let dividerIndex = 1;
+  let drawerIndex = 1;
 
   Array.from(app.panels.values()).forEach(p => {
     let name = p.type;
@@ -170,6 +171,90 @@ function exportPanelsToJSON() {
         });
       });
     }
+  });
+
+  // Добавляем ящики
+  Array.from(app.drawers.values()).forEach(drawer => {
+    if (!drawer.parts) return;
+
+    const drawerName = `Ящик ${drawerIndex}`;
+    const drawerNameEn = `Drawer_${drawerIndex}`;
+    drawerIndex++;
+
+    // Фасад
+    const front = drawer.parts.front;
+    allPanels.push({
+      name: `${drawerName} - Фасад`,
+      nameEn: `${drawerNameEn}_Front`,
+      type: 'drawer-front',
+      x: Math.round(front.bounds.x1),
+      y: Math.round(front.bounds.y1),
+      z: Math.round(front.position.z - front.depth / 2),
+      width: Math.round(front.width),
+      height: Math.round(front.height),
+      depth: Math.round(front.depth),
+      thickness: 16
+    });
+
+    // Левая боковина
+    const leftSide = drawer.parts.leftSide;
+    allPanels.push({
+      name: `${drawerName} - Левая боковина`,
+      nameEn: `${drawerNameEn}_Left_Side`,
+      type: 'drawer-side',
+      x: Math.round(leftSide.bounds.x),
+      y: Math.round(leftSide.bounds.y1),
+      z: Math.round(leftSide.bounds.z1),
+      width: Math.round(leftSide.width),
+      height: Math.round(leftSide.height),
+      depth: Math.round(leftSide.depth),
+      thickness: 16
+    });
+
+    // Правая боковина
+    const rightSide = drawer.parts.rightSide;
+    allPanels.push({
+      name: `${drawerName} - Правая боковина`,
+      nameEn: `${drawerNameEn}_Right_Side`,
+      type: 'drawer-side',
+      x: Math.round(rightSide.bounds.x),
+      y: Math.round(rightSide.bounds.y1),
+      z: Math.round(rightSide.bounds.z1),
+      width: Math.round(rightSide.width),
+      height: Math.round(rightSide.height),
+      depth: Math.round(rightSide.depth),
+      thickness: 16
+    });
+
+    // Задняя стенка
+    const back = drawer.parts.back;
+    allPanels.push({
+      name: `${drawerName} - Задняя стенка`,
+      nameEn: `${drawerNameEn}_Back`,
+      type: 'drawer-back',
+      x: Math.round(back.bounds.x1),
+      y: Math.round(back.bounds.y1),
+      z: Math.round(back.bounds.z),
+      width: Math.round(back.width),
+      height: Math.round(back.height),
+      depth: Math.round(back.depth),
+      thickness: 16
+    });
+
+    // Дно
+    const bottom = drawer.parts.bottom;
+    allPanels.push({
+      name: `${drawerName} - Дно`,
+      nameEn: `${drawerNameEn}_Bottom`,
+      type: 'drawer-bottom',
+      x: Math.round(bottom.bounds.x1),
+      y: Math.round(bottom.bounds.y),
+      z: Math.round(bottom.bounds.z1),
+      width: Math.round(bottom.width),
+      height: Math.round(bottom.height),
+      depth: Math.round(bottom.depth),
+      thickness: 16
+    });
   });
 
   // Формируем JSON

@@ -35,20 +35,48 @@ export class Drawer {
     ];
     const minDepth = Math.min(...depths);
 
-    return {
+    // Для виртуальных панелей (боковины/дно/крыша) position = центр
+    // Для реальных панелей position = левый/нижний край
+    const leftEdge = leftDivider.type === 'left' 
+      ? leftDivider.position.x + CONFIG.DSP / 2  // виртуальная боковина: центр + половина
+      : leftDivider.position.x + CONFIG.DSP;      // реальный разделитель: левый край + толщина
+    
+    const rightEdge = rightDivider.type === 'right'
+      ? rightDivider.position.x - CONFIG.DSP / 2  // виртуальная боковина: центр - половина
+      : rightDivider.position.x;                  // реальный разделитель: левый край
+    
+    const bottomEdge = bottomShelf.type === 'bottom'
+      ? bottomShelf.position.y + CONFIG.DSP / 2   // виртуальное дно: центр + половина
+      : bottomShelf.position.y + CONFIG.DSP;      // реальная полка: нижний край + толщина
+    
+    const topEdge = topShelf.type === 'top'
+      ? topShelf.position.y - CONFIG.DSP / 2      // виртуальная крыша: центр - половина
+      : topShelf.position.y;                      // реальная полка: нижний край
+
+    const volume = {
       x: {
-        start: leftDivider.position.x + CONFIG.DSP / 2,
-        end: rightDivider.position.x - CONFIG.DSP / 2
+        start: leftEdge,
+        end: rightEdge
       },
       y: {
-        start: bottomShelf.position.y + CONFIG.DSP / 2,
-        end: topShelf.position.y - CONFIG.DSP / 2
+        start: bottomEdge,
+        end: topEdge
       },
       z: {
         start: 0,
         end: minDepth - 2  // отступ 2мм от самой утопленной панели
       }
     };
+
+    console.log('Drawer volume:', {
+      leftDiv: leftDivider.position.x,
+      rightDiv: rightDivider.position.x,
+      bottomShelf: bottomShelf.position.y,
+      topShelf: topShelf.position.y,
+      volume
+    });
+
+    return volume;
   }
 
   /**
@@ -103,8 +131,8 @@ export class Drawer {
         height: volHeight - 30,
         depth: CONFIG.DSP,
         position: {
-          x: (vol.x.start + vol.x.end) / 2 + 2,
-          y: (vol.y.start + vol.y.end) / 2 + 2,
+          x: (vol.x.start + vol.x.end) / 2,
+          y: (vol.y.start + vol.y.end - 26) / 2,
           z: frontZ - CONFIG.DSP / 2
         },
         bounds: {
