@@ -539,7 +539,7 @@ export class App {
     }
     
     // Обновляем позицию панели
-    panel.mainPosition = Math.max(min, Math.min(max, newPos));
+    panel.mainPosition = Math.round(Math.max(min, Math.min(max, newPos)));
     
     // Обновляем bounds и connections только связанных панелей (включая ребра)
     this.updateConnectedPanels(panel);
@@ -608,7 +608,7 @@ export class App {
     }
     
     // Ограничиваем новое положение
-    newX = Math.max(minX, Math.min(maxX, newX));
+    newX = Math.round(Math.max(minX, Math.min(maxX, newX)));
     
     // Обновляем размеры шкафа
     const oldWidth = this.cabinet.width;
@@ -692,7 +692,7 @@ export class App {
       // newY это центр дна, преобразуем в base (верх дна = base)
       const requestedBase = newY + CONFIG.DSP/2;
       const oldBase = this.cabinet.base;
-      const newBase = Math.max(minBase, Math.min(maxBase, requestedBase));
+      const newBase = Math.round(Math.max(minBase, Math.min(maxBase, requestedBase)));
       
       // Рассчитываем сдвиг
       const delta = newBase - oldBase;
@@ -740,7 +740,7 @@ export class App {
       // newY это центр крыши, преобразуем в height (низ крыши = height - DSP)
       const requestedHeight = newY + CONFIG.DSP/2;
       const oldHeight = this.cabinet.height;
-      const newHeight = Math.max(minHeight, Math.min(maxHeight, requestedHeight));
+      const newHeight = Math.round(Math.max(minHeight, Math.min(maxHeight, requestedHeight)));
       
       if (newHeight === oldHeight) return;  // Ничего не изменилось
       
