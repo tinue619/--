@@ -222,14 +222,28 @@ export class Drawer {
    * Сериализация для сохранения
    */
   toJSON() {
+    // Сериализуем connections, сохраняя информацию о виртуальных панелях
+    const serializeConnection = (connection) => {
+      if (!connection) return null;
+      
+      // Виртуальные панели: сохраняем только тип
+      if (connection.type === 'left' || connection.type === 'right' || 
+          connection.type === 'bottom' || connection.type === 'top') {
+        return { virtual: true, type: connection.type };
+      }
+      
+      // Реальные панели: сохраняем ID
+      return { virtual: false, id: connection.id };
+    };
+    
     return {
       type: this.type,
       id: this.id,
       connections: {
-        bottomShelf: this.connections.bottomShelf?.id || null,
-        topShelf: this.connections.topShelf?.id || null,
-        leftDivider: this.connections.leftDivider?.id || null,
-        rightDivider: this.connections.rightDivider?.id || null
+        bottomShelf: serializeConnection(this.connections.bottomShelf),
+        topShelf: serializeConnection(this.connections.topShelf),
+        leftDivider: serializeConnection(this.connections.leftDivider),
+        rightDivider: serializeConnection(this.connections.rightDivider)
       }
     };
   }
@@ -237,12 +251,69 @@ export class Drawer {
   /**
    * Десериализация
    */
-  static fromJSON(data, panels) {
+  static fromJSON(data, panels, app) {
+    // Восстанавливаем connections, создавая виртуальные панели если нужно
+    const deserializeConnection = (connectionData) => {
+      if (!connectionData) return null;
+      
+      // Виртуальная панель: создаём новый объект
+      if (connectionData.virtual) {
+        const type = connectionData.type;
+        
+        if (type === 'left') {
+          return {
+            type: 'left',
+            id: 'virtual-left',
+            position: { x: CONFIG.DSP/2 },
+            bounds: { startY: 0, endY: app.cabinet.height },
+            connections: {},
+            isHorizontal: false
+          };
+        }
+        
+        if (type === 'right') {
+          return {
+            type: 'right',
+            id: 'virtual-right',
+            position: { x: app.cabinet.width - CONFIG.DSP/2 },
+            bounds: { startY: 0, endY: app.cabinet.height },
+            connections: {},
+            isHorizontal: false
+          };
+        }
+        
+        if (type === 'bottom') {
+          return {
+            type: 'bottom',
+            id: 'virtual-bottom',
+            position: { y: app.cabinet.base - CONFIG.DSP/2 },
+            bounds: { startX: CONFIG.DSP, endX: app.cabinet.width - CONFIG.DSP },
+            connections: {},
+            isHorizontal: true
+          };
+        }
+        
+        if (type === 'top') {
+          return {
+            type: 'top',
+            id: 'virtual-top',
+            position: { y: app.cabinet.height - CONFIG.DSP/2 },
+            bounds: { startX: CONFIG.DSP, endX: app.cabinet.width - CONFIG.DSP },
+            connections: {},
+            isHorizontal: true
+          };
+        }
+      }
+      
+      // Реальная панель: ищем по ID
+      return panels.get(connectionData.id) || null;
+    };
+    
     const connections = {
-      bottomShelf: data.connections.bottomShelf ? panels.get(data.connections.bottomShelf) : null,
-      topShelf: data.connections.topShelf ? panels.get(data.connections.topShelf) : null,
-      leftDivider: data.connections.leftDivider ? panels.get(data.connections.leftDivider) : null,
-      rightDivider: data.connections.rightDivider ? panels.get(data.connections.rightDivider) : null
+      bottomShelf: deserializeConnection(data.connections.bottomShelf),
+      topShelf: deserializeConnection(data.connections.topShelf),
+      leftDivider: deserializeConnection(data.connections.leftDivider),
+      rightDivider: deserializeConnection(data.connections.rightDivider)
     };
 
     return new Drawer(data.id, connections);

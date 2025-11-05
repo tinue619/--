@@ -1286,7 +1286,7 @@ export class App {
     // Восстанавливаем ящики, если они есть в состоянии
     if (state.drawers) {
       state.drawers.forEach(drawerData => {
-        const drawer = Drawer.fromJSON(drawerData, this.panels);
+        const drawer = Drawer.fromJSON(drawerData, this.panels, this);
         drawer.calculateParts(this);  // Пересчитываем части
         this.drawers.set(drawer.id, drawer);
       });
@@ -1411,7 +1411,7 @@ export class App {
         // Загружаем ящики, если они есть
         if (data.drawers) {
           data.drawers.forEach(drawerData => {
-            const drawer = Drawer.fromJSON(drawerData, this.panels);
+            const drawer = Drawer.fromJSON(drawerData, this.panels, this);
             drawer.calculateParts(this);  // Пересчитываем части
             this.drawers.set(drawer.id, drawer);
           });
