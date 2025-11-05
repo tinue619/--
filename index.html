@@ -409,6 +409,14 @@
         app.updateMesh(panel);
       }
       
+      // Пересчитываем все ящики после изменения глубины
+      for (let drawer of app.drawers.values()) {
+        drawer.updateParts(app);
+        if (window.updateDrawerMeshes) {
+          window.updateDrawerMeshes(app, drawer);
+        }
+      }
+      
       // Логируем
       if (app.logToHistory) {
         app.logToHistory(`Глубина изменена на ${newDepth}мм`);
