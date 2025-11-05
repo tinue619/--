@@ -41,6 +41,13 @@ import {
   loadState,
   showSaved
 } from './modules/stateManager.js';
+import { 
+  saveHistory,
+  undo,
+  redo,
+  restoreState,
+  updateHistoryButtons
+} from './modules/historyManager.js';
 
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
@@ -1141,177 +1148,23 @@ export class App {
   
   // ========== ИСТОРИЯ ==========
   saveHistory() {
-    // Получаем предыдущее состояние для сравнения
-    // Если есть boundsSnapshot (перемещение боковины), создаем искусственное состояние
-    let prevState;
-    if (this.interaction.boundsSnapshot && this.history.index >= 0) {
-      // Используем снапшот bounds ДО изменения
-      const historicalState = this.history.states[this.history.index];
-      prevState = {
-        cabinet: historicalState.cabinet,
-        panels: historicalState.panels.map(p => {
-          // Если есть снапшот для этой панели, используем его
-          const snapshot = this.interaction.boundsSnapshot.get(p.id);
-          if (snapshot && p.type === 'shelf') {
-            return {
-              ...p,
-              bounds: {
-                startX: snapshot.startX,
-                endX: snapshot.endX
-              }
-            };
-          }
-          return p;
-        })
-      };
-    } else {
-      prevState = this.history.index >= 0 ? this.history.states[this.history.index] : null;
-    }
-    const state = {
-      cabinet: {
-        width: this.cabinet.width,
-        height: this.cabinet.height,
-        depth: this.cabinet.depth,
-        base: this.cabinet.base
-      },
-      panels: Array.from(this.panels.values()).map(p => ({
-        type: p.type,
-        id: p.id,
-        position: { ...p.position },
-        bounds: { ...p.bounds },
-        connections: this.serializeConnections(p.connections)
-      })),
-      drawers: Array.from(this.drawers.values()).map(d => d.toJSON()),
-      nextId: this.nextId,
-      nextDrawerId: this.nextDrawerId
-    };
-    
-    if (this.history.index < this.history.states.length - 1) {
-      this.history.states = this.history.states.slice(0, this.history.index + 1);
-    }
-    
-    this.history.states.push(state);
-    if (this.history.states.length > CONFIG.UI.MAX_HISTORY) {
-      this.history.states.shift();
-    } else {
-      this.history.index++;
-    }
-    
-    this.updateHistoryButtons();
-    this.scheduleSave();
-    
-    // Логируем изменения
-    const changes = compareStatesForLog(prevState, state);
-    if (changes.length > 0) {
-      logToHistory('save', changes);
-    }
+    saveHistory(this);
   }
   
   undo() {
-    if (this.history.index <= 0) return;
-    
-    const currentState = this.history.states[this.history.index];
-    const prevState = this.history.states[this.history.index - 1];
-    
-    this.history.index--;
-    this.restoreState(prevState);
-    
-    // Логируем отмену: сравниваем ТЕКУЩЕЕ состояние из истории с ПРЕДЫДУЩИМ
-    const changes = compareStatesForLog(currentState, prevState);
-    if (changes.length > 0) {
-      logToHistory('undo', changes);
-    }
+    undo(this);
   }
   
   redo() {
-    if (this.history.index >= this.history.states.length - 1) return;
-    
-    const currentState = this.history.states[this.history.index];
-    const nextState = this.history.states[this.history.index + 1];
-    
-    this.history.index++;
-    this.restoreState(nextState);
-    
-    // Логируем повтор: сравниваем ТЕКУЩЕЕ состояние с СЛЕДУЮЩИМ
-    const changes = compareStatesForLog(currentState, nextState);
-    if (changes.length > 0) {
-      logToHistory('redo', changes);
-    }
+    redo(this);
   }
   
   restoreState(state) {
-    // Восстанавливаем размеры шкафа, если они есть в состоянии
-    if (state.cabinet) {
-      this.cabinet.width = state.cabinet.width;
-      this.cabinet.height = state.cabinet.height;
-      this.cabinet.depth = state.cabinet.depth;
-      this.cabinet.base = state.cabinet.base;
-      this.updateCalc();
-      
-      // Обновляем canvas с новыми размерами
-      this.updateCanvas();
-      
-      // Перестраиваем 3D корпус
-      if (this.viewer3D) {
-        this.viewer3D.rebuildCabinet();
-      }
-    }
-    
-    // Очищаем текущие панели
-    for (let panel of this.panels.values()) {
-      removeMesh(this, panel);
-    }
-    this.panels.clear();
-    
-    // Очищаем текущие ящики
-    for (let drawer of this.drawers.values()) {
-      removeDrawerMeshes(this, drawer);
-    }
-    this.drawers.clear();
-    
-    // Сначала создаем все панели без connections
-    state.panels.forEach(data => {
-      const panel = new Panel(data.type, data.id, data.position, data.bounds, {});
-      this.panels.set(data.id, panel);
-    });
-    
-    // Теперь восстанавливаем connections с правильными ссылками
-    state.panels.forEach(data => {
-      const panel = this.panels.get(data.id);
-      panel.connections = this.deserializeConnections(data.connections);
-    });
-    
-    this.nextId = state.nextId;
-    
-    // Восстанавливаем ящики, если они есть в состоянии
-    if (state.drawers) {
-      state.drawers.forEach(drawerData => {
-        const drawer = Drawer.fromJSON(drawerData, this.panels, this);
-        drawer.calculateParts(this);  // Пересчитываем части
-        this.drawers.set(drawer.id, drawer);
-      });
-      
-      if (state.nextDrawerId !== undefined) {
-        this.nextDrawerId = state.nextDrawerId;
-      }
-    }
-    
-    // Обновляем ребра для всех полок
-    for (let panel of this.panels.values()) {
-      if (panel.isHorizontal) {
-        panel.updateRibs(this.panels, this.cabinet.width);
-      }
-    }
-    
-    render2D(this);
-    renderAll3D(this);
-    this.updateStats();
-    this.updateHistoryButtons();
+    restoreState(this, state);
   }
   
   updateHistoryButtons() {
-    document.getElementById('undo-btn').disabled = this.history.index <= 0;
-    document.getElementById('redo-btn').disabled = this.history.index >= this.history.states.length - 1;
+    updateHistoryButtons(this);
   }
   
   // ========== ОТЛАДКА ИСТОРИИ (обертки для модуля) ==========
