@@ -48,6 +48,10 @@ import {
   restoreState,
   updateHistoryButtons
 } from './modules/historyManager.js';
+import { 
+  addDrawer,
+  createDrawerStack
+} from './modules/drawerOperations.js';
 
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
@@ -1207,103 +1211,7 @@ export class App {
   
   // ========== ЯЩИКИ ==========
   addDrawer(coords) {
-    console.log('addDrawer called:', coords, 'drawerCount:', this.drawerCount);
-    
-    // Найдем 4 панели, которые ограничивают область клика
-    let bottomShelf = null, topShelf = null, leftDivider = null, rightDivider = null;
-    
-    // Находим полки снизу и сверху
-    for (let panel of this.panels.values()) {
-      if (!panel.isHorizontal) continue;
-      
-      if (coords.x >= panel.bounds.startX && coords.x <= panel.bounds.endX) {
-        if (panel.position.y <= coords.y) {
-          if (!bottomShelf || panel.position.y > bottomShelf.position.y) {
-            bottomShelf = panel;
-          }
-        } else {
-          if (!topShelf || panel.position.y < topShelf.position.y) {
-            topShelf = panel;
-          }
-        }
-      }
-    }
-    
-    // Находим разделители слева и справа
-    for (let panel of this.panels.values()) {
-      if (panel.isHorizontal) continue;
-      
-      if (coords.y >= panel.bounds.startY && coords.y <= panel.bounds.endY) {
-        if (panel.position.x <= coords.x) {
-          if (!leftDivider || panel.position.x > leftDivider.position.x) {
-            leftDivider = panel;
-          }
-        } else {
-          if (!rightDivider || panel.position.x < rightDivider.position.x) {
-            rightDivider = panel;
-          }
-        }
-      }
-    }
-    
-    // Если не нашли полки - используем дно/крышу
-    if (!bottomShelf) {
-      bottomShelf = {
-        type: 'bottom',
-        id: 'virtual-bottom',
-        position: { y: this.cabinet.base - CONFIG.DSP/2 },
-        bounds: { startX: CONFIG.DSP, endX: this.cabinet.width - CONFIG.DSP },
-        connections: {},
-        isHorizontal: true
-      };
-    }
-    
-    if (!topShelf) {
-      topShelf = {
-        type: 'top',
-        id: 'virtual-top',
-        position: { y: this.cabinet.height - CONFIG.DSP/2 },
-        bounds: { startX: CONFIG.DSP, endX: this.cabinet.width - CONFIG.DSP },
-        connections: {},
-        isHorizontal: true
-      };
-    }
-    
-    if (!leftDivider) {
-      leftDivider = {
-        type: 'left',
-        id: 'virtual-left',
-        position: { x: CONFIG.DSP/2 },
-        bounds: { startY: 0, endY: this.cabinet.height },
-        connections: {},
-        isHorizontal: false
-      };
-    }
-    
-    if (!rightDivider) {
-      rightDivider = {
-        type: 'right',
-        id: 'virtual-right',
-        position: { x: this.cabinet.width - CONFIG.DSP/2 },
-        bounds: { startY: 0, endY: this.cabinet.height },
-        connections: {},
-        isHorizontal: false
-      };
-    }
-    
-    // Создаём стек ящиков
-    const baseConnections = { bottomShelf, topShelf, leftDivider, rightDivider };
-    const success = this.createDrawerStack(baseConnections, this.drawerCount);
-    
-    if (!success) {
-      this.updateStatus('Не удалось создать ящики - проверьте размеры области');
-      return;
-    }
-    
-    this.saveHistory();
-    render2D(this);
-    renderAll3D(this);
-    this.updateStats();
+    addDrawer(this, coords);
   }
   
   /**
@@ -1313,76 +1221,7 @@ export class App {
    * @returns {boolean} - Успех создания
    */
   createDrawerStack(baseConnections, count) {
-    const { bottomShelf, topShelf, leftDivider, rightDivider } = baseConnections;
-    
-    // Высчитываем общую высоту секции
-    const bottomY = bottomShelf.type === 'bottom' ? this.cabinet.base : (bottomShelf.position.y + CONFIG.DSP);
-    const topY = topShelf.type === 'top' ? (this.cabinet.height - CONFIG.DSP) : topShelf.position.y;
-    const totalHeight = topY - bottomY;
-    
-    // Высота одного ящика
-    const drawerHeight = totalHeight / count;
-    
-    // Проверка минимальной высоты
-    if (drawerHeight < CONFIG.DRAWER.MIN_HEIGHT) {
-      console.error(`Высота одного ящика слишком мала: ${Math.round(drawerHeight)}mm < ${CONFIG.DRAWER.MIN_HEIGHT}mm`);
-      return false;
-    }
-    
-    // Создаём виртуальные полки для разделения стека
-    const virtualShelves = [];
-    for (let i = 0; i <= count; i++) {
-      const y = bottomY + (drawerHeight * i);
-      
-      if (i === 0) {
-        virtualShelves.push(bottomShelf);
-      } else if (i === count) {
-        virtualShelves.push(topShelf);
-      } else {
-        // Создаём виртуальную полку для разделения
-        virtualShelves.push({
-          type: 'virtual-shelf',
-          id: `virtual-shelf-${i}`,
-          position: { y: y },
-          bounds: { 
-            startX: leftDivider.type === 'left' ? CONFIG.DSP : (leftDivider.position.x + CONFIG.DSP),
-            endX: rightDivider.type === 'right' ? (this.cabinet.width - CONFIG.DSP) : rightDivider.position.x
-          },
-          connections: {},
-          isHorizontal: true
-        });
-      }
-    }
-    
-    // Создаём ящики
-    const createdDrawers = [];
-    for (let i = 0; i < count; i++) {
-      const id = `drawer-${this.nextDrawerId++}`;
-      const connections = {
-        bottomShelf: virtualShelves[i],
-        topShelf: virtualShelves[i + 1],
-        leftDivider: leftDivider,
-        rightDivider: rightDivider
-      };
-      
-      const drawer = new Drawer(id, connections);
-      const success = drawer.calculateParts(this);
-      
-      if (!success) {
-        // Откатываем создание - удаляем уже созданные
-        for (let d of createdDrawers) {
-          removeDrawerMeshes(this, d);
-          this.drawers.delete(d.id);
-        }
-        return false;
-      }
-      
-      this.drawers.set(id, drawer);
-      createdDrawers.push(drawer);
-    }
-    
-    console.log(`Создан стек из ${count} ящиков, высота каждого: ${Math.round(drawerHeight)}mm`);
-    return true;
+    return createDrawerStack(this, baseConnections, count);
   }
   
   // ========== 3D МЕТОДЫ ==========
