@@ -73,13 +73,24 @@ export class Drawer {
 
   /**
    * Выбрать boxLength из стандартных размеров
+   * Если секция слишком глубокая - берём максимальный короб и прижимаем к фасаду
    */
   calculateBoxLength(volDepth) {
     // Добавляем DSP к volDepth, т.к. volume не включает переднюю панель
     const availableDepth = volDepth + CONFIG.DSP;
     
     const suitable = CONFIG.DRAWER.SIZES.filter(s => s <= availableDepth);
-    return suitable.length > 0 ? suitable[suitable.length - 1] : null;
+    
+    if (suitable.length > 0) {
+      // Есть подходящий размер - берём максимальный из подходящих
+      return suitable[suitable.length - 1];
+    } else if (availableDepth >= CONFIG.DRAWER.SIZES[0]) {
+      // Секция глубже максимального короба - берём максимальный короб
+      return CONFIG.DRAWER.SIZES[CONFIG.DRAWER.SIZES.length - 1];
+    } else {
+      // Секция слишком мелкая даже для минимального короба
+      return null;
+    }
   }
 
   /**
@@ -108,10 +119,9 @@ export class Drawer {
       console.error(`Drawer ${this.id}: height too small (${Math.round(volHeight)}mm < ${CONFIG.DRAWER.MIN_HEIGHT}mm)`);
       return false;
     }
-    if (volHeight > CONFIG.DRAWER.MAX_HEIGHT) {
-      console.error(`Drawer ${this.id}: height too large (${Math.round(volHeight)}mm > ${CONFIG.DRAWER.MAX_HEIGHT}mm)`);
-      return false;
-    }
+    
+    // Если высота секции больше максимальной - ограничиваем высоту ящика и размещаем его внизу
+    const effectiveHeight = Math.min(volHeight, CONFIG.DRAWER.MAX_HEIGHT);
 
     const boxLength = this.calculateBoxLength(volDepth);
     if (!boxLength) {
@@ -121,8 +131,8 @@ export class Drawer {
 
     this.boxLength = boxLength;
 
-    // Общие расчеты
-    const sideHeight = volHeight - 56;
+    // Общие расчеты (используем effectiveHeight вместо volHeight)
+    const sideHeight = effectiveHeight - 56;
     const sideDepth = boxLength - 26;
     const bottomDepth = boxLength - 44;
 
@@ -134,22 +144,22 @@ export class Drawer {
     const bottomZ1 = sidesZ1 + CONFIG.DSP + CONFIG.DRAWER.BOTTOM_OFFSET;
     const bottomZ2 = bottomZ1 + bottomDepth;
 
-    // Рассчитываем все 5 частей
+    // Рассчитываем все 5 частей (ящик размещается внизу секции)
     this.parts = {
       front: {
         width: volWidth - 4,
-        height: volHeight - 30,
+        height: effectiveHeight - 30,
         depth: CONFIG.DSP,
         position: {
           x: (vol.x.start + vol.x.end) / 2,
-          y: (vol.y.start + vol.y.end - 26) / 2,
+          y: vol.y.start + (effectiveHeight - 26) / 2,
           z: frontZ - CONFIG.DSP / 2
         },
         bounds: {
           x1: vol.x.start + CONFIG.DRAWER.GAP_FRONT,
           x2: vol.x.end - CONFIG.DRAWER.GAP_FRONT,
           y1: vol.y.start + CONFIG.DRAWER.GAP_BOTTOM,
-          y2: vol.y.end - CONFIG.DRAWER.GAP_TOP
+          y2: vol.y.start + effectiveHeight - CONFIG.DRAWER.GAP_TOP
         }
       },
 
@@ -191,18 +201,18 @@ export class Drawer {
 
       back: {
         width: volWidth - 42,
-        height: volHeight - 68,
+        height: effectiveHeight - 68,
         depth: CONFIG.DSP,
         position: {
           x: (vol.x.start + vol.x.end) / 2,
-          y: vol.y.start + 27 + (volHeight - 68) / 2,
+          y: vol.y.start + 27 + (effectiveHeight - 68) / 2,
           z: backZ + CONFIG.DSP / 2
         },
         bounds: {
           x1: vol.x.start + CONFIG.DRAWER.INNER_OFFSET,
           x2: vol.x.end - CONFIG.DRAWER.INNER_OFFSET,
           y1: vol.y.start + 27,
-          y2: vol.y.end - 41,
+          y2: vol.y.start + effectiveHeight - 41,
           z: backZ
         }
       },
