@@ -37,6 +37,7 @@ export class App {
     this.drawers = new Map();  // Ящики
     this.nextId = 0;
     this.nextDrawerId = 0;
+    this.drawerCount = 1;  // Количество ящиков в стеке (1-5)
     
     // Взаимодействие
     this.interaction = {
@@ -1522,7 +1523,8 @@ export class App {
   
   // ========== ЯЩИКИ ==========
   addDrawer(coords) {
-    console.log('addDrawer called:', coords);
+    console.log('addDrawer called:', coords, 'drawerCount:', this.drawerCount);
+    
     // Найдем 4 панели, которые ограничивают область клика
     let bottomShelf = null, topShelf = null, leftDivider = null, rightDivider = null;
     
@@ -1530,7 +1532,6 @@ export class App {
     for (let panel of this.panels.values()) {
       if (!panel.isHorizontal) continue;
       
-      // Проверяем, что клик в горизонтальных границах полки
       if (coords.x >= panel.bounds.startX && coords.x <= panel.bounds.endX) {
         if (panel.position.y <= coords.y) {
           if (!bottomShelf || panel.position.y > bottomShelf.position.y) {
@@ -1548,7 +1549,6 @@ export class App {
     for (let panel of this.panels.values()) {
       if (panel.isHorizontal) continue;
       
-      // Проверяем, что клик в вертикальных границах разделителя
       if (coords.y >= panel.bounds.startY && coords.y <= panel.bounds.endY) {
         if (panel.position.x <= coords.x) {
           if (!leftDivider || panel.position.x > leftDivider.position.x) {
@@ -1564,7 +1564,6 @@ export class App {
     
     // Если не нашли полки - используем дно/крышу
     if (!bottomShelf) {
-      // Создаем виртуальную панель для дна
       bottomShelf = {
         type: 'bottom',
         id: 'virtual-bottom',
@@ -1576,7 +1575,6 @@ export class App {
     }
     
     if (!topShelf) {
-      // Создаем виртуальную панель для крыши
       topShelf = {
         type: 'top',
         id: 'virtual-top',
@@ -1588,7 +1586,6 @@ export class App {
     }
     
     if (!leftDivider) {
-      // Создаем виртуальную панель для левой боковины
       leftDivider = {
         type: 'left',
         id: 'virtual-left',
@@ -1600,7 +1597,6 @@ export class App {
     }
     
     if (!rightDivider) {
-      // Создаем виртуальную панель для правой боковины
       rightDivider = {
         type: 'right',
         id: 'virtual-right',
@@ -1611,27 +1607,98 @@ export class App {
       };
     }
     
-    // Создаем ящик
-    const id = `drawer-${this.nextDrawerId++}`;
-    const connections = { bottomShelf, topShelf, leftDivider, rightDivider };
-    const drawer = new Drawer(id, connections);
-    
-    // Рассчитываем части ящика
-    const success = drawer.calculateParts(this);
-    
-    console.log('Drawer calculation:', { success, drawer, connections: { bottomShelf, topShelf, leftDivider, rightDivider } });
+    // Создаём стек ящиков
+    const baseConnections = { bottomShelf, topShelf, leftDivider, rightDivider };
+    const success = this.createDrawerStack(baseConnections, this.drawerCount);
     
     if (!success) {
-      this.updateStatus('Не удалось создать ящик - проверьте размеры области');
+      this.updateStatus('Не удалось создать ящики - проверьте размеры области');
       return;
     }
-    
-    this.drawers.set(id, drawer);
     
     this.saveHistory();
     render2D(this);
     renderAll3D(this);
     this.updateStats();
+  }
+  
+  /**
+   * Создаёт стек из N ящиков, равномерно разделяя высоту секции
+   * @param {Object} baseConnections - Базовые границы секции { bottomShelf, topShelf, leftDivider, rightDivider }
+   * @param {number} count - Количество ящиков (1-5)
+   * @returns {boolean} - Успех создания
+   */
+  createDrawerStack(baseConnections, count) {
+    const { bottomShelf, topShelf, leftDivider, rightDivider } = baseConnections;
+    
+    // Высчитываем общую высоту секции
+    const bottomY = bottomShelf.type === 'bottom' ? this.cabinet.base : (bottomShelf.position.y + CONFIG.DSP);
+    const topY = topShelf.type === 'top' ? (this.cabinet.height - CONFIG.DSP) : topShelf.position.y;
+    const totalHeight = topY - bottomY;
+    
+    // Высота одного ящика
+    const drawerHeight = totalHeight / count;
+    
+    // Проверка минимальной высоты
+    if (drawerHeight < CONFIG.DRAWER.MIN_HEIGHT) {
+      console.error(`Высота одного ящика слишком мала: ${Math.round(drawerHeight)}mm < ${CONFIG.DRAWER.MIN_HEIGHT}mm`);
+      return false;
+    }
+    
+    // Создаём виртуальные полки для разделения стека
+    const virtualShelves = [];
+    for (let i = 0; i <= count; i++) {
+      const y = bottomY + (drawerHeight * i);
+      
+      if (i === 0) {
+        virtualShelves.push(bottomShelf);
+      } else if (i === count) {
+        virtualShelves.push(topShelf);
+      } else {
+        // Создаём виртуальную полку для разделения
+        virtualShelves.push({
+          type: 'virtual-shelf',
+          id: `virtual-shelf-${i}`,
+          position: { y: y },
+          bounds: { 
+            startX: leftDivider.type === 'left' ? CONFIG.DSP : (leftDivider.position.x + CONFIG.DSP),
+            endX: rightDivider.type === 'right' ? (this.cabinet.width - CONFIG.DSP) : rightDivider.position.x
+          },
+          connections: {},
+          isHorizontal: true
+        });
+      }
+    }
+    
+    // Создаём ящики
+    const createdDrawers = [];
+    for (let i = 0; i < count; i++) {
+      const id = `drawer-${this.nextDrawerId++}`;
+      const connections = {
+        bottomShelf: virtualShelves[i],
+        topShelf: virtualShelves[i + 1],
+        leftDivider: leftDivider,
+        rightDivider: rightDivider
+      };
+      
+      const drawer = new Drawer(id, connections);
+      const success = drawer.calculateParts(this);
+      
+      if (!success) {
+        // Откатываем создание - удаляем уже созданные
+        for (let d of createdDrawers) {
+          removeDrawerMeshes(this, d);
+          this.drawers.delete(d.id);
+        }
+        return false;
+      }
+      
+      this.drawers.set(id, drawer);
+      createdDrawers.push(drawer);
+    }
+    
+    console.log(`Создан стек из ${count} ящиков, высота каждого: ${Math.round(drawerHeight)}mm`);
+    return true;
   }
   
   // ========== 3D МЕТОДЫ ==========
