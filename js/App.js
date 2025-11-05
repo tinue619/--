@@ -567,6 +567,96 @@ export class App {
     this.updateStats();
   }
   
+  /**
+   * Получить координату панели (реальной или виртуальной)
+   */
+  getPanelCoord(panel, axis) {
+    if (!panel) return null;
+    
+    // Виртуальные панели
+    if (panel.type === 'left') return CONFIG.DSP/2;
+    if (panel.type === 'right') return this.cabinet.width - CONFIG.DSP/2;
+    if (panel.type === 'bottom') return this.cabinet.base;
+    if (panel.type === 'top') return this.cabinet.height - CONFIG.DSP;
+    if (panel.type === 'virtual-shelf') return panel.position.y;
+    
+    // Реальные панели
+    return panel.position[axis];
+  }
+  
+  /**
+   * Получить ограничения от ящиков для перемещаемой панели
+   * @param {Panel} panel - Перемещаемая панель
+   * @returns {{min: number, max: number}} - Ограничения
+   */
+  getDrawerLimitsForPanel(panel) {
+    let min = -Infinity;
+    let max = Infinity;
+    
+    for (let drawer of this.drawers.values()) {
+      const conn = drawer.connections;
+      
+      if (panel.isHorizontal) {
+        // Перемещаем полку (горизонтальную панель)
+        
+        // Если полка - это bottomShelf ящика
+        if (conn.bottomShelf === panel || 
+            (conn.bottomShelf?.id && conn.bottomShelf.id === panel.id)) {
+          // Полка не может подняться выше чем (topShelf.y - MIN_HEIGHT)
+          const topY = this.getPanelCoord(conn.topShelf, 'y');
+          if (topY !== null) {
+            const maxY = topY - CONFIG.DRAWER.MIN_HEIGHT;
+            if (maxY < max) max = maxY;
+          }
+        }
+        
+        // Если полка - это topShelf ящика
+        if (conn.topShelf === panel || 
+            (conn.topShelf?.id && conn.topShelf.id === panel.id)) {
+          // Полка не может опуститься ниже чем (bottomShelf.y + MIN_HEIGHT)
+          const bottomY = this.getPanelCoord(conn.bottomShelf, 'y');
+          if (bottomY !== null) {
+            // Для bottom-shelf: y = base, нужно добавить DSP
+            const effectiveBottomY = conn.bottomShelf.type === 'bottom' ? bottomY : (bottomY + CONFIG.DSP);
+            const minY = effectiveBottomY + CONFIG.DRAWER.MIN_HEIGHT;
+            if (minY > min) min = minY;
+          }
+        }
+        
+      } else {
+        // Перемещаем разделитель (вертикальную панель)
+        
+        // Если разделитель - это leftDivider ящика
+        if (conn.leftDivider === panel || 
+            (conn.leftDivider?.id && conn.leftDivider.id === panel.id)) {
+          // Разделитель не может сдвинуться вправо больше чем (rightDivider.x - MIN_WIDTH)
+          const rightX = this.getPanelCoord(conn.rightDivider, 'x');
+          if (rightX !== null) {
+            // Для right-divider: нужно учесть DSP
+            const effectiveRightX = conn.rightDivider.type === 'right' ? rightX : (rightX - CONFIG.DSP);
+            const maxX = effectiveRightX - CONFIG.DRAWER.MIN_WIDTH;
+            if (maxX < max) max = maxX;
+          }
+        }
+        
+        // Если разделитель - это rightDivider ящика
+        if (conn.rightDivider === panel || 
+            (conn.rightDivider?.id && conn.rightDivider.id === panel.id)) {
+          // Разделитель не может сдвинуться влево больше чем (leftDivider.x + MIN_WIDTH)
+          const leftX = this.getPanelCoord(conn.leftDivider, 'x');
+          if (leftX !== null) {
+            // Для left-divider: нужно учесть DSP
+            const effectiveLeftX = conn.leftDivider.type === 'left' ? leftX : (leftX + CONFIG.DSP);
+            const minX = effectiveLeftX + CONFIG.DRAWER.MIN_WIDTH;
+            if (minX > min) min = minX;
+          }
+        }
+      }
+    }
+    
+    return { min, max };
+  }
+  
   // ========== ПЕРЕМЕЩЕНИЕ ПАНЕЛЕЙ ==========
   movePanel(panel, coords) {
     // Особая обработка для боковин
@@ -604,6 +694,15 @@ export class App {
           max = other.mainPosition - CONFIG.MIN_GAP;
         }
       }
+    }
+    
+    // Добавляем ограничения от ящиков
+    const drawerLimits = this.getDrawerLimitsForPanel(panel);
+    if (drawerLimits.min > -Infinity) {
+      min = Math.max(min, drawerLimits.min);
+    }
+    if (drawerLimits.max < Infinity) {
+      max = Math.min(max, drawerLimits.max);
     }
     
     // Обновляем позицию панели
