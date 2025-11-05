@@ -15,7 +15,7 @@ import {
 } from './modules/historyLogging.js';
 import { debugHistory, debugCurrentState, compareStates } from './modules/historyDebug.js';
 import { render2D } from './modules/render2D.js';
-import { initViewer3D, renderAll3D, updateMesh, removeMesh } from './modules/render3D.js';
+import { initViewer3D, renderAll3D, updateMesh, removeMesh, updateDrawerMeshes, removeDrawerMeshes } from './modules/render3D.js';
 
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
@@ -390,6 +390,18 @@ export class App {
         return panel;
       }
     }
+    
+    // Наконец проверяем ящики (низкий приоритет)
+    for (let drawer of this.drawers.values()) {
+      if (!drawer.volume) continue;
+      
+      // Проверяем, попадает ли клик в область ящика
+      if (coords.x >= drawer.volume.x.start && coords.x <= drawer.volume.x.end &&
+          coords.y >= drawer.volume.y.start && coords.y <= drawer.volume.y.end) {
+        return drawer;  // Возвращаем сам ящик
+      }
+    }
+    
     return null;
   }
   
@@ -651,6 +663,12 @@ export class App {
       }
     }
     
+    // Пересчитываем все ящики после изменения ширины
+    for (let drawer of this.drawers.values()) {
+      drawer.updateParts(this);
+      updateDrawerMeshes(this, drawer);  // Обновляем 3D меши
+    }
+    
     // Обновляем отображение
     this.updateCanvas();
     render2D(this);
@@ -773,6 +791,12 @@ export class App {
       }
     }
     
+    // Пересчитываем все ящики после изменения высоты/цоколя
+    for (let drawer of this.drawers.values()) {
+      drawer.updateParts(this);
+      updateDrawerMeshes(this, drawer);  // Обновляем 3D меши
+    }
+    
     // Обновляем отображение
     this.updateCanvas();
     render2D(this);
@@ -837,10 +861,34 @@ export class App {
         shelf.updateRibs(this.panels, this.cabinet.width);
       }
     }
+    
+    // Пересчитываем ящики которые связаны с перемещённой панелью
+    for (let drawer of this.drawers.values()) {
+      const connections = drawer.connections;
+      // Проверяем, связан ли ящик с перемещённой панелью
+      if (connections.bottomShelf === movedPanel || 
+          connections.topShelf === movedPanel ||
+          connections.leftDivider === movedPanel ||
+          connections.rightDivider === movedPanel) {
+        drawer.updateParts(this);
+        updateDrawerMeshes(this, drawer);  // Обновляем 3D меши
+      }
+    }
   }
   
   // ========== УДАЛЕНИЕ ==========
   deletePanel(panel) {
+    // Проверяем, не ящик ли это
+    if (panel.type === 'drawer') {
+      removeDrawerMeshes(this, panel);
+      this.drawers.delete(panel.id);
+      this.saveHistory();
+      render2D(this);
+      renderAll3D(this);
+      this.updateStats();
+      return;
+    }
+    
     const toDelete = new Set([panel]);
     
     const findDependent = (current) => {
@@ -897,6 +945,23 @@ export class App {
     for (let panel of this.panels.values()) {
       if (panel.isHorizontal) {
         panel.updateRibs(this.panels, this.cabinet.width);
+      }
+    }
+    
+    // Удаляем ящики, которые связаны с удаленными панелями
+    for (let drawer of this.drawers.values()) {
+      const connections = drawer.connections;
+      // Проверяем, связан ли ящик с удаленной панелью
+      if (toDelete.has(connections.bottomShelf) || 
+          toDelete.has(connections.topShelf) ||
+          toDelete.has(connections.leftDivider) ||
+          toDelete.has(connections.rightDivider)) {
+        removeDrawerMeshes(this, drawer);  // Удаляем 3D меши
+        this.drawers.delete(drawer.id);
+      } else {
+        // Пересчитываем оставшиеся ящики
+        drawer.updateParts(this);
+        updateDrawerMeshes(this, drawer);  // Обновляем 3D меши
       }
     }
     
@@ -973,15 +1038,18 @@ export class App {
   }
   
   clearAll() {
-    if (this.panels.size === 0) return;
-    
-    const count = this.panels.size;
+    if (this.panels.size === 0 && this.drawers.size === 0) return;
     
     for (let panel of this.panels.values()) {
       removeMesh(this, panel);
     }
     
+    for (let drawer of this.drawers.values()) {
+      removeDrawerMeshes(this, drawer);
+    }
+    
     this.panels.clear();
+    this.drawers.clear();
     
     this.saveHistory();
     render2D(this);
@@ -1017,11 +1085,32 @@ export class App {
       }
     }
     
+    // Отзеркаливаем ящики - меняем leftDivider и rightDivider местами
+    for (let drawer of this.drawers.values()) {
+      const tempLeft = drawer.connections.leftDivider;
+      drawer.connections.leftDivider = drawer.connections.rightDivider;
+      drawer.connections.rightDivider = tempLeft;
+      
+      // ВАЖНО: Если это виртуальные боковины, меняем их типы
+      if (drawer.connections.leftDivider && drawer.connections.leftDivider.type === 'right') {
+        drawer.connections.leftDivider.type = 'left';
+      }
+      if (drawer.connections.rightDivider && drawer.connections.rightDivider.type === 'left') {
+        drawer.connections.rightDivider.type = 'right';
+      }
+    }
+    
     // Обновляем рёбра жёсткости для всех полок
     for (let panel of this.panels.values()) {
       if (panel.isHorizontal) {
         panel.updateRibs(this.panels, this.cabinet.width);
       }
+    }
+    
+    // Пересчитываем все ящики после отзеркаливания
+    for (let drawer of this.drawers.values()) {
+      drawer.updateParts(this);
+      updateDrawerMeshes(this, drawer);  // Обновляем 3D меши
     }
     
     this.saveHistory();
@@ -1341,6 +1430,7 @@ export class App {
   
   // ========== ЯЩИКИ ==========
   addDrawer(coords) {
+    console.log('addDrawer called:', coords);
     // Найдем 4 панели, которые ограничивают область клика
     let bottomShelf = null, topShelf = null, leftDivider = null, rightDivider = null;
     
@@ -1436,6 +1526,8 @@ export class App {
     
     // Рассчитываем части ящика
     const success = drawer.calculateParts(this);
+    
+    console.log('Drawer calculation:', { success, drawer, connections: { bottomShelf, topShelf, leftDivider, rightDivider } });
     
     if (!success) {
       this.updateStatus('Не удалось создать ящик - слишком маленькая область (мин. 270мм глубина)');

@@ -35,23 +35,23 @@ export class Drawer {
     ];
     const minDepth = Math.min(...depths);
 
-    // Для виртуальных панелей (боковины/дно/крыша) position = центр
-    // Для реальных панелей position = левый/нижний край
+    // ВАЖНО: Для виртуальных панелей берём значения из app.cabinet напрямую!
+    // Это гарантирует актуальность при изменении размеров шкафа
     const leftEdge = leftDivider.type === 'left' 
-      ? leftDivider.position.x + CONFIG.DSP / 2  // виртуальная боковина: центр + половина
-      : leftDivider.position.x + CONFIG.DSP;      // реальный разделитель: левый край + толщина
+      ? CONFIG.DSP  // виртуальная боковина: всегда актуальное значение
+      : leftDivider.position.x + CONFIG.DSP;  // реальный разделитель
     
     const rightEdge = rightDivider.type === 'right'
-      ? rightDivider.position.x - CONFIG.DSP / 2  // виртуальная боковина: центр - половина
-      : rightDivider.position.x;                  // реальный разделитель: левый край
+      ? app.cabinet.width - CONFIG.DSP  // виртуальная боковина: всегда актуальное значение
+      : rightDivider.position.x;  // реальный разделитель
     
     const bottomEdge = bottomShelf.type === 'bottom'
-      ? bottomShelf.position.y + CONFIG.DSP / 2   // виртуальное дно: центр + половина
-      : bottomShelf.position.y + CONFIG.DSP;      // реальная полка: нижний край + толщина
+      ? app.cabinet.base  // виртуальное дно: всегда актуальное значение
+      : bottomShelf.position.y + CONFIG.DSP;  // реальная полка
     
     const topEdge = topShelf.type === 'top'
-      ? topShelf.position.y - CONFIG.DSP / 2      // виртуальная крыша: центр - половина
-      : topShelf.position.y;                      // реальная полка: нижний край
+      ? app.cabinet.height - CONFIG.DSP  // виртуальная крыша: всегда актуальное значение
+      : topShelf.position.y;  // реальная полка
 
     const volume = {
       x: {
@@ -67,14 +67,6 @@ export class Drawer {
         end: minDepth - 2  // отступ 2мм от самой утопленной панели
       }
     };
-
-    console.log('Drawer volume:', {
-      leftDiv: leftDivider.position.x,
-      rightDiv: rightDivider.position.x,
-      bottomShelf: bottomShelf.position.y,
-      topShelf: topShelf.position.y,
-      volume
-    });
 
     return volume;
   }
