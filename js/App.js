@@ -16,6 +16,14 @@ import {
 import { debugHistory, debugCurrentState, compareStates } from './modules/historyDebug.js';
 import { render2D } from './modules/render2D.js';
 import { initViewer3D, renderAll3D, updateMesh, removeMesh, updateDrawerMeshes, removeDrawerMeshes } from './modules/render3D.js';
+import { 
+  setupEvents,
+  setMode, 
+  updateStatus, 
+  switchTab, 
+  updateStats, 
+  updateCabinetInfo 
+} from './modules/uiManager.js';
 
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
@@ -121,81 +129,20 @@ export class App {
   }
   
   setupEvents() {
-    // UI элементы
-    const addListener = (selector, event, handler) => {
-      const el = selector instanceof Element ? selector : document.querySelector(selector);
-      if (el) el.addEventListener(event, handler);
-    };
-    
-    document.querySelectorAll('.tab').forEach(tab => 
-      addListener(tab, 'click', () => this.switchTab(tab))
-    );
-    
-    document.querySelectorAll('.mode-btn').forEach(btn => 
-      addListener(btn, 'click', () => this.setMode(btn.dataset.mode))
-    );
-    
-    addListener('.clear-btn', 'click', () => this.clearAll());
-    addListener('#mirror-btn', 'click', () => this.mirrorContent());
-    addListener('#undo-btn', 'click', () => this.undo());
-    addListener('#redo-btn', 'click', () => this.redo());
-    addListener('#clear-history-btn', 'click', () => clearHistoryLog());
-    addListener('#collapse-history-btn', 'click', () => toggleHistoryCollapse());
-    addListener('#copy-history-btn', 'click', () => copyHistoryLogs(this));
-    
-    // Перетаскивание панели истории
-    setupHistoryDrag();
-    
-    // Canvas события
-    const canvas = this.canvas.element;
-    const pointerEvents = ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'];
-    pointerEvents.forEach(event => 
-      addListener(canvas, event, (e) => this.handlePointer(e), { passive: false })
-    );
-    
-    window.addEventListener('resize', () => this.updateCanvas());
+    setupEvents(this);
   }
   
   // ========== УПРАВЛЕНИЕ РЕЖИМАМИ ==========
   setMode(mode) {
-    this.mode = mode;
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
-    this.updateStatus();
+    setMode(this, mode);
   }
   
   updateStatus(temp = null) {
-    const messages = {
-      shelf: 'Режим: Добавление полки',
-      divider: 'Режим: Добавление разделителя',
-      drawer: 'Режим: Добавление ящика',
-      move: 'Режим: Перемещение',
-      delete: 'Режим: Удаление'
-    };
-    
-    const text = temp || messages[this.mode];
-    document.getElementById('status-text').textContent = text;
-    
-    if (temp) {
-      setTimeout(() => this.updateStatus(), 3000);
-    }
+    updateStatus(this, temp);
   }
   
   switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    
-    tab.classList.add('active');
-    document.getElementById(tab.dataset.panel).classList.add('active');
-    
-    if (tab.dataset.panel === 'viewer-panel') {
-      setTimeout(() => {
-        if (!this.viewer3D) initViewer3D(this);
-        if (this.viewer3D) this.viewer3D.resize();
-      }, 50);
-    } else {
-      this.updateCanvas();
-    }
+    switchTab(this, tab);
   }
   
   // ========== CANVAS УТИЛИТЫ ==========
@@ -1674,20 +1621,11 @@ export class App {
   }
   
   updateStats() {
-    const shelves = Array.from(this.panels.values()).filter(p => p.type === 'shelf');
-    const dividers = Array.from(this.panels.values()).filter(p => p.type === 'divider');
-    
-    document.getElementById('stat-shelves').textContent = shelves.length;
-    document.getElementById('stat-dividers').textContent = dividers.length;
-    
-    // Обновляем размеры шкафа
-    this.updateCabinetInfo();
+    updateStats(this);
   }
   
   updateCabinetInfo() {
-    document.getElementById('stat-width').textContent = `${Math.round(this.cabinet.width)} мм`;
-    document.getElementById('stat-height').textContent = `${Math.round(this.cabinet.height)} мм`;
-    document.getElementById('stat-depth').textContent = `${Math.round(this.cabinet.depth)} мм`;
+    updateCabinetInfo(this);
   }
   
   // ========== ЯЩИКИ ==========
