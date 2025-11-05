@@ -33,6 +33,14 @@ import {
   endInteraction,
   findPanelAt
 } from './modules/interactions.js';
+import { 
+  serializeConnections,
+  deserializeConnections,
+  scheduleSave,
+  saveToStorage,
+  loadState,
+  showSaved
+} from './modules/stateManager.js';
 
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
@@ -1124,22 +1132,11 @@ export class App {
   
   // ========== СЕРИАЛИЗАЦИЯ CONNECTIONS ==========
   serializeConnections(connections) {
-    // Конвертируем Panel ссылки в ID для сохранения
-    const serialized = {};
-    for (let key in connections) {
-      serialized[key] = connections[key] ? connections[key].id : null;
-    }
-    return serialized;
+    return serializeConnections(this, connections);
   }
   
   deserializeConnections(connectionsData) {
-    // Конвертируем ID обратно в Panel ссылки
-    const deserialized = {};
-    for (let key in connectionsData) {
-      const panelId = connectionsData[key];
-      deserialized[key] = panelId ? this.panels.get(panelId) : null;
-    }
-    return deserialized;
+    return deserializeConnections(this, connectionsData);
   }
   
   // ========== ИСТОРИЯ ==========
@@ -1332,123 +1329,19 @@ export class App {
   
   // ========== СОХРАНЕНИЕ ==========
   scheduleSave() {
-    if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.saveToStorage(), CONFIG.UI.SAVE_DELAY);
+    scheduleSave(this);
   }
   
   saveToStorage() {
-    try {
-      localStorage.setItem('cabinetDesignV3', JSON.stringify({
-        cabinet: {
-          width: this.cabinet.width,
-          height: this.cabinet.height,
-          depth: this.cabinet.depth,
-          base: this.cabinet.base
-        },
-        panels: Array.from(this.panels.values()).map(p => ({
-          type: p.type,
-          id: p.id,
-          position: { ...p.position },
-          bounds: { ...p.bounds },
-          connections: this.serializeConnections(p.connections)
-        })),
-        drawers: Array.from(this.drawers.values()).map(d => d.toJSON()),
-        nextId: this.nextId,
-        nextDrawerId: this.nextDrawerId,
-        history: this.history
-      }));
-      this.showSaved();
-    } catch (e) {
-      console.error('Save error:', e);
-    }
+    saveToStorage(this);
   }
   
   loadState() {
-    try {
-      const data = JSON.parse(localStorage.getItem('cabinetDesignV3') || '{}');
-      
-      // Загружаем размеры шкафа, если они есть
-      if (data.cabinet) {
-        this.cabinet.width = data.cabinet.width;
-        this.cabinet.height = data.cabinet.height;
-        this.cabinet.depth = data.cabinet.depth;
-        this.cabinet.base = data.cabinet.base;
-        this.updateCalc();
-        
-        // Обновляем 3D корпус если он уже инициализирован
-        if (this.viewer3D) {
-          this.viewer3D.rebuildCabinet();
-        }
-      }
-      
-      if (data.panels) {
-        // Сначала создаем все панели без connections
-        data.panels.forEach(panelData => {
-          // Округляем координаты при загрузке старых данных
-          const position = {};
-          if (panelData.position.x !== undefined) {
-            position.x = Math.round(panelData.position.x);
-          }
-          if (panelData.position.y !== undefined) {
-            position.y = Math.round(panelData.position.y);
-          }
-          
-          const panel = new Panel(
-            panelData.type,
-            panelData.id,
-            position,
-            panelData.bounds,
-            {}
-          );
-          this.panels.set(panelData.id, panel);
-        });
-        
-        // Теперь восстанавливаем connections с правильными ссылками
-        data.panels.forEach(panelData => {
-          const panel = this.panels.get(panelData.id);
-          panel.connections = this.deserializeConnections(panelData.connections);
-        });
-        
-        this.nextId = data.nextId || 0;
-        
-        // Загружаем ящики, если они есть
-        if (data.drawers) {
-          data.drawers.forEach(drawerData => {
-            const drawer = Drawer.fromJSON(drawerData, this.panels, this);
-            drawer.calculateParts(this);  // Пересчитываем части
-            this.drawers.set(drawer.id, drawer);
-          });
-          
-          if (data.nextDrawerId !== undefined) {
-            this.nextDrawerId = data.nextDrawerId;
-          }
-        }
-        
-        this.history = data.history || { states: [], index: -1 };
-        
-        // Обновляем ребра для всех загруженных полок
-        for (let panel of this.panels.values()) {
-          if (panel.isHorizontal) {
-            panel.updateRibs(this.panels, this.cabinet.width);
-          }
-        }
-      }
-      
-      if (this.history.states.length === 0) {
-        this.saveHistory();
-      }
-      
-      this.updateHistoryButtons();
-    } catch (e) {
-      console.error('Load error:', e);
-      this.saveHistory();
-    }
+    loadState(this);
   }
   
   showSaved() {
-    const indicator = document.getElementById('saved-indicator');
-    indicator.classList.add('show');
-    setTimeout(() => indicator.classList.remove('show'), 2000);
+    showSaved(this);
   }
   
   updateStats() {
