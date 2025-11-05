@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Clear Cabinet Editor Storage</title>
+</head>
+<body>
+    <h1>Clear Cabinet Editor Storage</h1>
+    <button onclick="clearStorage()">Очистить localStorage</button>
+    <div id="result"></div>
+    
+    <script>
+        function clearStorage() {
+            const keys = ['cabinetDesignV3'];
+            let cleared = [];
+            
+            keys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    cleared.push(key);
+                }
+            });
+            
+            document.getElementById('result').innerHTML = cleared.length > 0 
+                ? '<p style="color: green;">Очищено: ' + cleared.join(', ') + '</p>'
+                : '<p style="color: orange;">Нечего очищать</p>';
+        }
+        
+        // Показать текущие данные
+        const data = localStorage.getItem('cabinetDesignV3');
+        if (data) {
+            const parsed = JSON.parse(data);
+            console.log('Current storage data:', parsed);
+            if (parsed.drawers) {
+                console.log('Drawers connections:', parsed.drawers.map(d => d.connections));
+            }
+        }
+    </script>
+</body>
+</html>

@@ -705,6 +705,20 @@ export class App {
       max = Math.min(max, drawerLimits.max);
     }
     
+    // Отладка: выводим ограничения
+    if (drawerLimits.min > -Infinity || drawerLimits.max < Infinity) {
+      console.log('Panel movement limits:', {
+        panelId: panel.id,
+        newPos: Math.round(newPos),
+        finalMin: Math.round(min),
+        finalMax: Math.round(max),
+        drawerLimits: {
+          min: drawerLimits.min > -Infinity ? Math.round(drawerLimits.min) : 'none',
+          max: drawerLimits.max < Infinity ? Math.round(drawerLimits.max) : 'none'
+        }
+      });
+    }
+    
     // Обновляем позицию панели
     panel.mainPosition = Math.round(Math.max(min, Math.min(max, newPos)));
     
@@ -861,7 +875,34 @@ export class App {
           }
         }
       }
+      // ВАЖНО: Добавляем ограничения от ящиков для виртуального дна
+      // Создаём временную виртуальную панель для проверки
+      const virtualBottom = {
+        type: 'bottom',
+        id: 'virtual-bottom',
+        position: { y: this.cabinet.base },
+        isHorizontal: true
+      };
       
+      const drawerLimits = this.getDrawerLimitsForPanel(virtualBottom);
+      
+      // Если дно - это bottomShelf какого-то ящика, оно не может подняться слишком высоко
+      if (drawerLimits.max < Infinity) {
+        // Преобразуем из координаты Y в base
+        const maxBaseFromDrawers = drawerLimits.max;
+        if (maxBaseFromDrawers < maxBase) {
+          maxBase = maxBaseFromDrawers;
+        }
+      }
+      
+      // Отладка
+      if (drawerLimits.max < Infinity) {
+        console.log('Bottom movement limits from drawers:', {
+          requestedBase: Math.round(newY + CONFIG.DSP/2),
+          maxBase: Math.round(maxBase),
+          drawerLimit: Math.round(drawerLimits.max)
+        });
+      }
       // newY это центр дна, преобразуем в base (верх дна = base)
       const requestedBase = newY + CONFIG.DSP/2;
       const oldBase = this.cabinet.base;
@@ -909,6 +950,35 @@ export class App {
           }
         }
       }
+      // ВАЖНО: Добавляем ограничения от ящиков для виртуальной крыши
+      // Создаём временную виртуальную панель для проверки
+      const virtualTop = {
+        type: 'top',
+        id: 'virtual-top',
+        position: { y: this.cabinet.height - CONFIG.DSP },
+        isHorizontal: true
+      };
+      
+      const drawerLimits = this.getDrawerLimitsForPanel(virtualTop);
+      
+      // Если крыша - это topShelf какого-то ящика, она не может опуститься слишком низко
+      if (drawerLimits.min > -Infinity) {
+        // Преобразуем из координаты Y в height
+        const minHeightFromDrawers = drawerLimits.min + CONFIG.DSP;
+        if (minHeightFromDrawers > minHeight) {
+          minHeight = minHeightFromDrawers;
+        }
+      }
+      
+      // Отладка
+      if (drawerLimits.min > -Infinity) {
+        console.log('Top movement limits from drawers:', {
+          requestedHeight: Math.round(newY + CONFIG.DSP/2),
+          minHeight: Math.round(minHeight),
+          drawerLimit: Math.round(drawerLimits.min)
+        });
+      }
+
       
       // newY это центр крыши, преобразуем в height (низ крыши = height - DSP)
       const requestedHeight = newY + CONFIG.DSP/2;

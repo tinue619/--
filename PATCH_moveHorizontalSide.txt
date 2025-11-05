@@ -1,0 +1,117 @@
+ПАТЧ ДЛЯ МЕТОДА moveHorizontalSide() в js/App.js
+
+========== ИНСТРУКЦИЯ ПО ПРИМЕНЕНИЮ ==========
+
+1. Откройте файл C:\Users\admin\Desktop\OMS\cabinet-editor\js\App.js в редакторе
+2. Найдите метод moveHorizontalSide() (около строки 1060)
+3. Примените изменения ниже
+
+Добавить проверки ограничений от ящиков для виртуальных панелей (дна и крыши).
+
+========== ДЛЯ ДВИЖЕНИЯ ДНА ==========
+
+ШАГИ:
+1. В методе moveHorizontalSide(), в блоке "if (isBottom)", найдите код:
+```javascript
+      // Ограничиваем самой нижней полкой
+      for (let panel of this.panels.values()) {
+        if (panel.isHorizontal) {
+          const minPossibleBase = panel.position.y - CONFIG.MIN_GAP - CONFIG.DSP;
+          if (minPossibleBase < maxBase) {
+            maxBase = minPossibleBase;
+          }
+        }
+      }
+```
+
+2. ПОСЛЕ ЭТОГО БЛОКА (перед строкой "// newY это центр дна...") ДОБАВЬТЕ:
+```javascript
+      // ВАЖНО: Добавляем ограничения от ящиков для виртуального дна
+      // Создаём временную виртуальную панель для проверки
+      const virtualBottom = {
+        type: 'bottom',
+        id: 'virtual-bottom',
+        position: { y: this.cabinet.base },
+        isHorizontal: true
+      };
+      
+      const drawerLimits = this.getDrawerLimitsForPanel(virtualBottom);
+      
+      // Если дно - это bottomShelf какого-то ящика, оно не может подняться слишком высоко
+      if (drawerLimits.max < Infinity) {
+        // Преобразуем из координаты Y в base
+        const maxBaseFromDrawers = drawerLimits.max;
+        if (maxBaseFromDrawers < maxBase) {
+          maxBase = maxBaseFromDrawers;
+        }
+      }
+      
+      // Отладка
+      if (drawerLimits.max < Infinity) {
+        console.log('Bottom movement limits from drawers:', {
+          requestedBase: Math.round(newY + CONFIG.DSP/2),
+          maxBase: Math.round(maxBase),
+          drawerLimit: Math.round(drawerLimits.max)
+        });
+      }
+```
+
+========== ДЛЯ ДВИЖЕНИЯ КРЫШИ ==========
+
+ШАГИ:
+1. В методе moveHorizontalSide(), в блоке "else" (для крыши), найдите код:
+```javascript
+      // Ограничиваем самой верхней полкой - крыша НЕ МОЖЕТ пройти сквозь полки
+      for (let panel of this.panels.values()) {
+        if (panel.isHorizontal) {
+          const minPossibleHeight = panel.position.y + CONFIG.DSP + CONFIG.MIN_GAP;
+          if (minPossibleHeight > minHeight) {
+            minHeight = minPossibleHeight;  // Крыша должна быть выше самой верхней полки
+          }
+        }
+      }
+```
+
+2. ПОСЛЕ ЭТОГО БЛОКА (перед строкой "// newY это центр крыши...") ДОБАВЬТЕ:
+```javascript
+      // ВАЖНО: Добавляем ограничения от ящиков для виртуальной крыши
+      // Создаём временную виртуальную панель для проверки
+      const virtualTop = {
+        type: 'top',
+        id: 'virtual-top',
+        position: { y: this.cabinet.height - CONFIG.DSP },
+        isHorizontal: true
+      };
+      
+      const drawerLimits = this.getDrawerLimitsForPanel(virtualTop);
+      
+      // Если крыша - это topShelf какого-то ящика, она не может опуститься слишком низко
+      if (drawerLimits.min > -Infinity) {
+        // Преобразуем из координаты Y в height
+        const minHeightFromDrawers = drawerLimits.min + CONFIG.DSP;
+        if (minHeightFromDrawers > minHeight) {
+          minHeight = minHeightFromDrawers;
+        }
+      }
+      
+      // Отладка
+      if (drawerLimits.min > -Infinity) {
+        console.log('Top movement limits from drawers:', {
+          requestedHeight: Math.round(newY + CONFIG.DSP/2),
+          minHeight: Math.round(minHeight),
+          drawerLimit: Math.round(drawerLimits.min)
+        });
+      }
+```
+
+========== ОБЪЯСНЕНИЕ ==========
+
+Эти изменения добавляют вызов существующей функции getDrawerLimitsForPanel() для проверки 
+ограничений от ящиков при перемещении дна и крыши шкафа. 
+
+Функция создаёт временные виртуальные панели с типом 'bottom' и 'top', которые распознаются 
+методом getDrawerLimitsForPanel() через проверку conn.bottomShelf.type === 'bottom' и 
+conn.topShelf.type === 'top'.
+
+Теперь дно и крыша будут упираться в ящики точно так же, как обычные панели, и не смогут 
+пройти сквозь них.
