@@ -1181,7 +1181,9 @@ export class App {
         bounds: { ...p.bounds },
         connections: this.serializeConnections(p.connections)
       })),
-      nextId: this.nextId
+      drawers: Array.from(this.drawers.values()).map(d => d.toJSON()),
+      nextId: this.nextId,
+      nextDrawerId: this.nextDrawerId
     };
     
     if (this.history.index < this.history.states.length - 1) {
@@ -1261,6 +1263,12 @@ export class App {
     }
     this.panels.clear();
     
+    // Очищаем текущие ящики
+    for (let drawer of this.drawers.values()) {
+      removeDrawerMeshes(this, drawer);
+    }
+    this.drawers.clear();
+    
     // Сначала создаем все панели без connections
     state.panels.forEach(data => {
       const panel = new Panel(data.type, data.id, data.position, data.bounds, {});
@@ -1274,6 +1282,19 @@ export class App {
     });
     
     this.nextId = state.nextId;
+    
+    // Восстанавливаем ящики, если они есть в состоянии
+    if (state.drawers) {
+      state.drawers.forEach(drawerData => {
+        const drawer = Drawer.fromJSON(drawerData, this.panels);
+        drawer.calculateParts(this);  // Пересчитываем части
+        this.drawers.set(drawer.id, drawer);
+      });
+      
+      if (state.nextDrawerId !== undefined) {
+        this.nextDrawerId = state.nextDrawerId;
+      }
+    }
     
     // Обновляем ребра для всех полок
     for (let panel of this.panels.values()) {
@@ -1328,7 +1349,9 @@ export class App {
           bounds: { ...p.bounds },
           connections: this.serializeConnections(p.connections)
         })),
+        drawers: Array.from(this.drawers.values()).map(d => d.toJSON()),
         nextId: this.nextId,
+        nextDrawerId: this.nextDrawerId,
         history: this.history
       }));
       this.showSaved();
@@ -1384,6 +1407,20 @@ export class App {
         });
         
         this.nextId = data.nextId || 0;
+        
+        // Загружаем ящики, если они есть
+        if (data.drawers) {
+          data.drawers.forEach(drawerData => {
+            const drawer = Drawer.fromJSON(drawerData, this.panels);
+            drawer.calculateParts(this);  // Пересчитываем части
+            this.drawers.set(drawer.id, drawer);
+          });
+          
+          if (data.nextDrawerId !== undefined) {
+            this.nextDrawerId = data.nextDrawerId;
+          }
+        }
+        
         this.history = data.history || { states: [], index: -1 };
         
         // Обновляем ребра для всех загруженных полок
