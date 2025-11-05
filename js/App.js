@@ -24,6 +24,15 @@ import {
   updateStats, 
   updateCabinetInfo 
 } from './modules/uiManager.js';
+import { 
+  updateCanvas,
+  getCoords,
+  handlePointer,
+  startInteraction,
+  updateInteraction,
+  endInteraction,
+  findPanelAt
+} from './modules/interactions.js';
 
 // ========== ГЛАВНОЕ ПРИЛОЖЕНИЕ ==========
 export class App {
@@ -147,210 +156,32 @@ export class App {
   
   // ========== CANVAS УТИЛИТЫ ==========
   updateCanvas() {
-    const container = this.canvas.element.parentElement;
-    const width = container.clientWidth - 30;
-    const height = container.clientHeight - 30;
-    
-    this.canvas.size = Math.min(width, height, 800);
-    this.canvas.element.width = this.canvas.size;
-    this.canvas.element.height = this.canvas.size;
-    this.canvas.element.style.width = this.canvas.size + 'px';
-    this.canvas.element.style.height = this.canvas.size + 'px';
-    
-    const scaleX = this.canvas.size / this.cabinet.width;
-    const scaleY = this.canvas.size / this.cabinet.height;
-    this.canvas.scale = Math.min(scaleX, scaleY) * CONFIG.UI.SCALE_PADDING;
-    
-    this.canvas.offset.x = (this.canvas.size - this.cabinet.width * this.canvas.scale) / 2;
-    this.canvas.offset.y = (this.canvas.size - this.cabinet.height * this.canvas.scale) / 2;
-    
-    render2D(this);
+    updateCanvas(this);
   }
   
   getCoords(e) {
-    const rect = this.canvas.element.getBoundingClientRect();
-    const point = e.touches?.[0] || e.changedTouches?.[0] || e;
-    
-    const canvasX = (point.clientX - rect.left) * (this.canvas.size / rect.width);
-    const canvasY = (point.clientY - rect.top) * (this.canvas.size / rect.height);
-    
-    return {
-      x: (canvasX - this.canvas.offset.x) / this.canvas.scale,
-      y: (this.canvas.size - canvasY - this.canvas.offset.y) / this.canvas.scale
-    };
+    return getCoords(this, e);
   }
   
   // ========== ОБРАБОТКА СОБЫТИЙ ==========
   handlePointer(e) {
-    e.preventDefault();
-    const coords = this.getCoords(e);
-    
-    const handlers = {
-      pointerdown: () => this.startInteraction(coords),
-      pointermove: () => this.updateInteraction(coords),
-      pointerup: () => this.endInteraction(coords),
-      pointercancel: () => this.endInteraction(coords)
-    };
-    
-    handlers[e.type]?.();
+    handlePointer(this, e);
   }
   
   startInteraction(coords) {
-    this.interaction.start = coords;
-    this.interaction.hasMoved = false;
-    this.interaction.boundsSnapshot = null;  // Сбрасываем снапшот
-    
-    if (this.mode === 'move') {
-      this.interaction.dragging = this.findPanelAt(coords);
-      if (this.interaction.dragging) {
-        this.interaction.originalPos = this.interaction.dragging.mainPosition;
-        
-        // Если тянем боковину - сохраняем bounds всех полок
-        if (this.interaction.dragging.type === 'side') {
-          this.interaction.boundsSnapshot = new Map();
-          for (let panel of this.panels.values()) {
-            if (panel.isHorizontal) {
-              this.interaction.boundsSnapshot.set(panel.id, {
-                startX: panel.bounds.startX,
-                endX: panel.bounds.endX
-              });
-            }
-          }
-        }
-      }
-    } else if (this.mode === 'delete') {
-      const panel = this.findPanelAt(coords);
-      if (panel) this.deletePanel(panel);
-    }
+    startInteraction(this, coords);
   }
-  
+
   updateInteraction(coords) {
-    if (!this.interaction.start) return;
-    
-    const distance = Math.hypot(
-      coords.x - this.interaction.start.x,
-      coords.y - this.interaction.start.y
-    );
-    
-    if (distance > CONFIG.UI.MIN_MOVE) {
-      this.interaction.hasMoved = true;
-    }
-    
-    if (this.interaction.dragging && this.interaction.hasMoved) {
-      this.movePanel(this.interaction.dragging, coords);
-    }
+    updateInteraction(this, coords);
   }
-  
+
   endInteraction(coords) {
-    if (!this.interaction.hasMoved && this.mode !== 'move' && this.mode !== 'delete' && this.interaction.start) {
-      if (this.mode === 'shelf') {
-        this.addPanel('shelf', coords.y, coords.x);
-      } else if (this.mode === 'divider') {
-        this.addPanel('divider', coords.x, coords.y);
-      } else if (this.mode === 'drawer') {
-        this.addDrawer(coords);
-      }
-    }
-    
-    if (this.interaction.dragging) {
-      if (this.interaction.hasMoved) {
-        this.saveHistory();
-      } else {
-        this.interaction.dragging.mainPosition = this.interaction.originalPos;
-        render2D(this);
-        updateMesh(this, this.interaction.dragging);
-      }
-    }
-    
-    this.interaction = { 
-      dragging: null, 
-      start: null, 
-      hasMoved: false,
-      boundsSnapshot: null  // Очищаем снапшот
-    };
+    endInteraction(this, coords);
   }
   
   findPanelAt(coords) {
-    // Сначала проверяем боковины (они приоритетнее обычных панелей)
-    // Левая боковина
-    if (Math.abs(coords.x - CONFIG.DSP/2) < CONFIG.UI.SNAP && 
-        coords.y >= 0 && coords.y <= this.cabinet.height) {
-      return {
-        type: 'side',
-        id: 'left-side',
-        position: { x: CONFIG.DSP/2 },
-        isHorizontal: false,
-        mainPosition: CONFIG.DSP/2,
-        start: 0,
-        end: this.cabinet.height
-      };
-    }
-    
-    // Правая боковина
-    if (Math.abs(coords.x - (this.cabinet.width - CONFIG.DSP/2)) < CONFIG.UI.SNAP && 
-        coords.y >= 0 && coords.y <= this.cabinet.height) {
-      return {
-        type: 'side',
-        id: 'right-side',
-        position: { x: this.cabinet.width - CONFIG.DSP/2 },
-        isHorizontal: false,
-        mainPosition: this.cabinet.width - CONFIG.DSP/2,
-        start: 0,
-        end: this.cabinet.height
-      };
-    }
-    
-    // Дно (управляет высотой цоколя)
-    if (Math.abs(coords.y - (this.cabinet.base - CONFIG.DSP/2)) < CONFIG.UI.SNAP && 
-        coords.x >= CONFIG.DSP && coords.x <= this.cabinet.width - CONFIG.DSP) {
-      return {
-        type: 'horizontal-side',
-        id: 'bottom-side',
-        position: { y: this.cabinet.base - CONFIG.DSP/2 },
-        isHorizontal: true,
-        mainPosition: this.cabinet.base - CONFIG.DSP/2,
-        start: CONFIG.DSP,
-        end: this.cabinet.width - CONFIG.DSP
-      };
-    }
-    
-    // Крыша (управляет общей высотой шкафа)
-    if (Math.abs(coords.y - (this.cabinet.height - CONFIG.DSP/2)) < CONFIG.UI.SNAP && 
-        coords.x >= CONFIG.DSP && coords.x <= this.cabinet.width - CONFIG.DSP) {
-      return {
-        type: 'horizontal-side',
-        id: 'top-side',
-        position: { y: this.cabinet.height - CONFIG.DSP/2 },
-        isHorizontal: true,
-        mainPosition: this.cabinet.height - CONFIG.DSP/2,
-        start: CONFIG.DSP,
-        end: this.cabinet.width - CONFIG.DSP
-      };
-    }
-    
-    // Затем проверяем обычные панели
-    for (let panel of this.panels.values()) {
-      const axis = panel.isHorizontal ? 'y' : 'x';
-      const pos = coords[axis];
-      const cross = coords[panel.isHorizontal ? 'x' : 'y'];
-      
-      if (panel.intersects(pos, axis) && panel.intersects(cross, panel.isHorizontal ? 'x' : 'y')) {
-        return panel;
-      }
-    }
-    
-    // Наконец проверяем ящики (низкий приоритет)
-    for (let drawer of this.drawers.values()) {
-      if (!drawer.volume) continue;
-      
-      // Проверяем, попадает ли клик в область ящика
-      if (coords.x >= drawer.volume.x.start && coords.x <= drawer.volume.x.end &&
-          coords.y >= drawer.volume.y.start && coords.y <= drawer.volume.y.end) {
-        return drawer;  // Возвращаем сам ящик
-      }
-    }
-    
-    return null;
+    return findPanelAt(this, coords);
   }
   
   // ========== ДОБАВЛЕНИЕ ПАНЕЛЕЙ ==========
