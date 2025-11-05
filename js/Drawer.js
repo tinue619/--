@@ -63,7 +63,7 @@ export class Drawer {
         end: topEdge
       },
       z: {
-        start: 0,
+        start: CONFIG.DSP,  // 16мм отступ от задней стенки (место для ребра жесткости)
         end: minDepth - 2  // отступ 2мм от самой утопленной панели
       }
     };
@@ -95,9 +95,27 @@ export class Drawer {
     const volHeight = vol.y.end - vol.y.start;
     const volDepth = vol.z.end - vol.z.start;
 
+    // Проверка минимальных и максимальных размеров ящика
+    if (volWidth < CONFIG.DRAWER.MIN_WIDTH) {
+      console.error(`Drawer ${this.id}: width too small (${Math.round(volWidth)}mm < ${CONFIG.DRAWER.MIN_WIDTH}mm)`);
+      return false;
+    }
+    if (volWidth > CONFIG.DRAWER.MAX_WIDTH) {
+      console.error(`Drawer ${this.id}: width too large (${Math.round(volWidth)}mm > ${CONFIG.DRAWER.MAX_WIDTH}mm)`);
+      return false;
+    }
+    if (volHeight < CONFIG.DRAWER.MIN_HEIGHT) {
+      console.error(`Drawer ${this.id}: height too small (${Math.round(volHeight)}mm < ${CONFIG.DRAWER.MIN_HEIGHT}mm)`);
+      return false;
+    }
+    if (volHeight > CONFIG.DRAWER.MAX_HEIGHT) {
+      console.error(`Drawer ${this.id}: height too large (${Math.round(volHeight)}mm > ${CONFIG.DRAWER.MAX_HEIGHT}mm)`);
+      return false;
+    }
+
     const boxLength = this.calculateBoxLength(volDepth);
     if (!boxLength) {
-      console.error(`Drawer ${this.id}: volume too small (min 270mm required)`);
+      console.error(`Drawer ${this.id}: volume too small (min ${CONFIG.DRAWER.SIZES[0]}mm required)`);
       return false;
     }
 
@@ -253,10 +271,13 @@ export class Drawer {
    */
   static fromJSON(data, panels, app) {
     // Восстанавливаем connections, создавая виртуальные панели если нужно
-    const deserializeConnection = (connectionData) => {
-      if (!connectionData) return null;
+    const deserializeConnection = (connectionData, connectionKey) => {
+      // ВАЖНО: null имеет тип 'object' в JavaScript!
+      if (connectionData === null || connectionData === undefined) {
+        return null;
+      }
       
-      // Виртуальная панель: создаём новый объект
+      // НОВЫЙ ФОРМАТ: Виртуальная панель: создаём новый объект
       if (connectionData.virtual) {
         const type = connectionData.type;
         
@@ -305,16 +326,108 @@ export class Drawer {
         }
       }
       
-      // Реальная панель: ищем по ID
-      return panels.get(connectionData.id) || null;
+      // СТАРЫЙ ФОРМАТ (для обратной совместимости): connectionData это ID строка
+      if (typeof connectionData === 'string') {
+        // Если это ID виртуальной панели
+        if (connectionData === 'virtual-left') {
+          return {
+            type: 'left',
+            id: 'virtual-left',
+            position: { x: CONFIG.DSP/2 },
+            bounds: { startY: 0, endY: app.cabinet.height },
+            connections: {},
+            isHorizontal: false
+          };
+        }
+        if (connectionData === 'virtual-right') {
+          return {
+            type: 'right',
+            id: 'virtual-right',
+            position: { x: app.cabinet.width - CONFIG.DSP/2 },
+            bounds: { startY: 0, endY: app.cabinet.height },
+            connections: {},
+            isHorizontal: false
+          };
+        }
+        if (connectionData === 'virtual-bottom') {
+          return {
+            type: 'bottom',
+            id: 'virtual-bottom',
+            position: { y: app.cabinet.base - CONFIG.DSP/2 },
+            bounds: { startX: CONFIG.DSP, endX: app.cabinet.width - CONFIG.DSP },
+            connections: {},
+            isHorizontal: true
+          };
+        }
+        if (connectionData === 'virtual-top') {
+          return {
+            type: 'top',
+            id: 'virtual-top',
+            position: { y: app.cabinet.height - CONFIG.DSP/2 },
+            bounds: { startX: CONFIG.DSP, endX: app.cabinet.width - CONFIG.DSP },
+            connections: {},
+            isHorizontal: true
+          };
+        }
+        // Это ID реальной панели
+        return panels.get(connectionData) || null;
+      }
+      
+      // НОВЫЙ ФОРМАТ: Реальная панель с объектом { virtual: false, id: ... }
+      if (connectionData.id) {
+        return panels.get(connectionData.id) || null;
+      }
+      
+      return null;
     };
     
     const connections = {
-      bottomShelf: deserializeConnection(data.connections.bottomShelf),
-      topShelf: deserializeConnection(data.connections.topShelf),
-      leftDivider: deserializeConnection(data.connections.leftDivider),
-      rightDivider: deserializeConnection(data.connections.rightDivider)
+      bottomShelf: deserializeConnection(data.connections.bottomShelf, 'bottomShelf'),
+      topShelf: deserializeConnection(data.connections.topShelf, 'topShelf'),
+      leftDivider: deserializeConnection(data.connections.leftDivider, 'leftDivider'),
+      rightDivider: deserializeConnection(data.connections.rightDivider, 'rightDivider')
     };
+    
+    // ФИКС для старых данных: если все connections null, создаём виртуальные панели по периметру
+    if (!connections.bottomShelf && !connections.topShelf && 
+        !connections.leftDivider && !connections.rightDivider) {
+      
+      connections.bottomShelf = {
+        type: 'bottom',
+        id: 'virtual-bottom',
+        position: { y: app.cabinet.base - CONFIG.DSP/2 },
+        bounds: { startX: CONFIG.DSP, endX: app.cabinet.width - CONFIG.DSP },
+        connections: {},
+        isHorizontal: true
+      };
+      
+      connections.topShelf = {
+        type: 'top',
+        id: 'virtual-top',
+        position: { y: app.cabinet.height - CONFIG.DSP/2 },
+        bounds: { startX: CONFIG.DSP, endX: app.cabinet.width - CONFIG.DSP },
+        connections: {},
+        isHorizontal: true
+      };
+      
+      connections.leftDivider = {
+        type: 'left',
+        id: 'virtual-left',
+        position: { x: CONFIG.DSP/2 },
+        bounds: { startY: 0, endY: app.cabinet.height },
+        connections: {},
+        isHorizontal: false
+      };
+      
+      connections.rightDivider = {
+        type: 'right',
+        id: 'virtual-right',
+        position: { x: app.cabinet.width - CONFIG.DSP/2 },
+        bounds: { startY: 0, endY: app.cabinet.height },
+        connections: {},
+        isHorizontal: false
+      };
+    }
 
     return new Drawer(data.id, connections);
   }

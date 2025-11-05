@@ -406,6 +406,48 @@ export class App {
   }
   
   // ========== ДОБАВЛЕНИЕ ПАНЕЛЕЙ ==========
+  
+  /**
+   * Проверяет, нет ли ящика в области, которую пересекает новая панель
+   */
+  hasDrawerInArea(isHorizontal, mainPos, startCross, endCross) {
+    for (let drawer of this.drawers.values()) {
+      if (!drawer.volume) continue;
+      
+      if (isHorizontal) {
+        // Проверяем полку: пересекает ли она ящик по Y
+        // Полка на высоте mainPos, от startCross до endCross по X
+        const shelfY = mainPos;
+        const shelfStartX = startCross;
+        const shelfEndX = endCross;
+        
+        // Проверяем, проходит ли полка через ящик
+        if (shelfY > drawer.volume.y.start && shelfY < drawer.volume.y.end) {
+          // Полка пересекает ящик по Y, проверяем X
+          if (!(shelfEndX <= drawer.volume.x.start || shelfStartX >= drawer.volume.x.end)) {
+            return true;  // Есть пересечение
+          }
+        }
+      } else {
+        // Проверяем разделитель: пересекает ли он ящик по X
+        // Разделитель на позиции mainPos, от startCross до endCross по Y
+        const dividerX = mainPos;
+        const dividerStartY = startCross;
+        const dividerEndY = endCross;
+        
+        // Проверяем, проходит ли разделитель через ящик
+        if (dividerX > drawer.volume.x.start && dividerX < drawer.volume.x.end) {
+          // Разделитель пересекает ящик по X, проверяем Y
+          if (!(dividerEndY <= drawer.volume.y.start || dividerStartY >= drawer.volume.y.end)) {
+            return true;  // Есть пересечение
+          }
+        }
+      }
+    }
+    
+    return false;  // Ящиков нет в этой области
+  }
+  
   addPanel(type, mainPos, crossPos) {
     const isHorizontal = type === 'shelf';
     
@@ -480,6 +522,19 @@ export class App {
       }
       
       bounds = { startY, endY };
+    }
+    
+    // Проверяем, нет ли ящика в этой области
+    if (isHorizontal) {
+      if (this.hasDrawerInArea(true, mainPos, bounds.startX, bounds.endX)) {
+        this.updateStatus('Нельзя добавить полку - в этой области есть ящик');
+        return;
+      }
+    } else {
+      if (this.hasDrawerInArea(false, mainPos, bounds.startY, bounds.endY)) {
+        this.updateStatus('Нельзя добавить разделитель - в этой области есть ящик');
+        return;
+      }
     }
     
     const id = `${type}-${this.nextId++}`;
@@ -1567,7 +1622,7 @@ export class App {
     console.log('Drawer calculation:', { success, drawer, connections: { bottomShelf, topShelf, leftDivider, rightDivider } });
     
     if (!success) {
-      this.updateStatus('Не удалось создать ящик - слишком маленькая область (мин. 270мм глубина)');
+      this.updateStatus('Не удалось создать ящик - проверьте размеры области');
       return;
     }
     
