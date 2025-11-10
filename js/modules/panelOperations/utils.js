@@ -65,9 +65,10 @@ export function getDrawerLimitsForPanel(app, panel) {
           // Панель - нижняя граница стека
           const topY = getPanelCoord(app, conn.topShelf, 'y');
           if (topY !== null) {
+            const effectiveTopY = conn.topShelf.type === 'top' ? topY : topY;
             // Минимальная высота стека = stackCount * MIN_HEIGHT
             const minStackHeight = stackCount * CONFIG.DRAWER.MIN_HEIGHT;
-            const maxY = topY - minStackHeight;
+            const maxY = effectiveTopY - minStackHeight;
             if (maxY < max) max = maxY;
           }
         }
@@ -77,9 +78,9 @@ export function getDrawerLimitsForPanel(app, panel) {
           const bottomY = getPanelCoord(app, conn.bottomShelf, 'y');
           if (bottomY !== null) {
             const effectiveBottomY = conn.bottomShelf.type === 'bottom' ? bottomY : (bottomY + CONFIG.DSP);
-            // Максимальная высота стека = stackCount * MAX_HEIGHT
-            const maxStackHeight = stackCount * CONFIG.DRAWER.MAX_HEIGHT;
-            const minY = effectiveBottomY + maxStackHeight;
+            // Минимальная высота стека = stackCount * MIN_HEIGHT
+            const minStackHeight = stackCount * CONFIG.DRAWER.MIN_HEIGHT;
+            const minY = effectiveBottomY + minStackHeight;
             if (minY > min) min = minY;
           }
         }
