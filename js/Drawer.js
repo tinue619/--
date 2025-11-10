@@ -6,10 +6,13 @@ import { CONFIG } from './config.js';
  * Ящик определяется 4 связями: bottomShelf, topShelf, leftDivider, rightDivider
  */
 export class Drawer {
-  constructor(id, connections) {
+  constructor(id, connections, stackId = null, stackIndex = 0, stackCount = 1) {
     this.type = 'drawer';
     this.id = id;
     this.connections = connections; // { bottomShelf, topShelf, leftDivider, rightDivider }
+    this.stackId = stackId; // ID стека, если ящик в стеке
+    this.stackIndex = stackIndex; // Индекс ящика в стеке (0, 1, 2...)
+    this.stackCount = stackCount; // Общее количество ящиков в стеке
     this.parts = null;
     this.boxLength = null;
     this.volume = null;
@@ -17,6 +20,7 @@ export class Drawer {
 
   /**
    * Рассчитать volume от connections
+   * Для стеков: каждый ящик занимает свою часть общей высоты
    */
   calculateVolume(app) {
     const { bottomShelf, topShelf, leftDivider, rightDivider } = this.connections;
@@ -36,22 +40,29 @@ export class Drawer {
     const minDepth = Math.min(...depths);
 
     // ВАЖНО: Для виртуальных панелей берём значения из app.cabinet напрямую!
-    // Это гарантирует актуальность при изменении размеров шкафа
     const leftEdge = leftDivider.type === 'left' 
-      ? CONFIG.DSP  // виртуальная боковина: всегда актуальное значение
-      : leftDivider.position.x + CONFIG.DSP;  // реальный разделитель
+      ? CONFIG.DSP
+      : leftDivider.position.x + CONFIG.DSP;
     
     const rightEdge = rightDivider.type === 'right'
-      ? app.cabinet.width - CONFIG.DSP  // виртуальная боковина: всегда актуальное значение
-      : rightDivider.position.x;  // реальный разделитель
+      ? app.cabinet.width - CONFIG.DSP
+      : rightDivider.position.x;
     
-    const bottomEdge = bottomShelf.type === 'bottom'
-      ? app.cabinet.base  // виртуальное дно: всегда актуальное значение
-      : bottomShelf.position.y + CONFIG.DSP;  // реальная полка
+    // Рассчитываем общую высоту стека
+    const stackBottomEdge = bottomShelf.type === 'bottom'
+      ? app.cabinet.base
+      : bottomShelf.position.y + CONFIG.DSP;
     
-    const topEdge = topShelf.type === 'top'
-      ? app.cabinet.height - CONFIG.DSP  // виртуальная крыша: всегда актуальное значение
-      : topShelf.position.y;  // реальная полка
+    const stackTopEdge = topShelf.type === 'top'
+      ? app.cabinet.height - CONFIG.DSP
+      : topShelf.position.y;
+    
+    const stackHeight = stackTopEdge - stackBottomEdge;
+    const drawerHeight = stackHeight / this.stackCount;
+    
+    // Рассчитываем границы этого ящика в стеке
+    const bottomEdge = stackBottomEdge + (this.stackIndex * drawerHeight);
+    const topEdge = bottomEdge + drawerHeight;
 
     const volume = {
       x: {
@@ -63,7 +74,7 @@ export class Drawer {
         end: topEdge
       },
       z: {
-        start: CONFIG.DSP,  // 16мм отступ от задней стенки (место для ребра жесткости)
+        start: CONFIG.DSP,  // 16мм отступ от задней стенки
         end: minDepth - 2  // отступ 2мм от самой утопленной панели
       }
     };

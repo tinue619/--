@@ -135,43 +135,29 @@ export function createDrawerStack(app, baseConnections, count) {
     return false;
   }
   
-  // Создаём виртуальные полки для разделения стека
-  const virtualShelves = [];
-  for (let i = 0; i <= count; i++) {
-    const y = bottomY + (drawerHeight * i);
-    
-    if (i === 0) {
-      virtualShelves.push(bottomShelf);
-    } else if (i === count) {
-      virtualShelves.push(topShelf);
-    } else {
-      // Создаём виртуальную полку для разделения
-      virtualShelves.push({
-        type: 'virtual-shelf',
-        id: `virtual-shelf-${i}`,
-        position: { y: y },
-        bounds: { 
-          startX: leftDivider.type === 'left' ? CONFIG.DSP : (leftDivider.position.x + CONFIG.DSP),
-          endX: rightDivider.type === 'right' ? (app.cabinet.width - CONFIG.DSP) : rightDivider.position.x
-        },
-        connections: {},
-        isHorizontal: true
-      });
-    }
+  // Проверка максимальной высоты
+  if (drawerHeight > CONFIG.DRAWER.MAX_HEIGHT) {
+    console.error(`Высота одного ящика слишком велика: ${Math.round(drawerHeight)}mm > ${CONFIG.DRAWER.MAX_HEIGHT}mm`);
+    return false;
   }
   
-  // Создаём ящики
+  // Создаём общий stackId для всех ящиков в этом стеке
+  const stackId = `stack-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Создаём ящики - все с одинаковыми connections (без виртуальных полок)
   const createdDrawers = [];
   for (let i = 0; i < count; i++) {
     const id = `drawer-${app.nextDrawerId++}`;
+    
+    // Все ящики используют одни и те же границы стека
     const connections = {
-      bottomShelf: virtualShelves[i],
-      topShelf: virtualShelves[i + 1],
+      bottomShelf: bottomShelf,
+      topShelf: topShelf,
       leftDivider: leftDivider,
       rightDivider: rightDivider
     };
     
-    const drawer = new Drawer(id, connections);
+    const drawer = new Drawer(id, connections, stackId, i, count); // передаём индекс и количество
     const success = drawer.calculateParts(app);
     
     if (!success) {
