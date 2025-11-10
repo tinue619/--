@@ -57,9 +57,10 @@ export function getDrawerLimitsForPanel(app, panel) {
       // Это стек - обрабатываем его целиком
       processedStacks.add(drawer.stackId);
       
-      // Находим все ящики в стеке и суммируем их минимальные высоты
+      // Находим все ящики в стеке и суммируем их минимальные и максимальные высоты
       const stackDrawers = Array.from(app.drawers.values()).filter(d => d.stackId === drawer.stackId);
       const minStackHeight = stackDrawers.length * CONFIG.DRAWER.MIN_HEIGHT;
+      const maxStackHeight = stackDrawers.length * CONFIG.DRAWER.MAX_HEIGHT;
       
       if (panel.isHorizontal) {
         // Двигаем горизонтальную панель (полку)
@@ -71,6 +72,10 @@ export function getDrawerLimitsForPanel(app, panel) {
             // Сумма минимальных высот всех ящиков в стеке
             const maxY = effectiveTopY - minStackHeight;
             if (maxY < max) max = maxY;
+            
+            // Ограничение на максимальное растяжение стека
+            const minYForMaxHeight = effectiveTopY - maxStackHeight;
+            if (minYForMaxHeight > min) min = minYForMaxHeight;
           }
         }
         
@@ -82,10 +87,17 @@ export function getDrawerLimitsForPanel(app, panel) {
             // Сумма минимальных высот всех ящиков в стеке
             const minY = effectiveBottomY + minStackHeight;
             if (minY > min) min = minY;
+            
+            // Ограничение на максимальное растяжение стека
+            const maxYForMaxHeight = effectiveBottomY + maxStackHeight;
+            if (maxYForMaxHeight < max) max = maxYForMaxHeight;
           }
         }
       } else {
         // Двигаем вертикальную панель (разделитель)
+        // Максимальная ширина стека
+        const maxStackWidth = CONFIG.DRAWER.MAX_WIDTH;
+        
         if (isLeftBoundary) {
           const rightX = getPanelCoord(app, conn.rightDivider, 'x');
           if (rightX !== null) {
@@ -93,6 +105,10 @@ export function getDrawerLimitsForPanel(app, panel) {
             // Минимальная ширина = MIN_WIDTH
             const maxX = effectiveRightX - CONFIG.DRAWER.MIN_WIDTH;
             if (maxX < max) max = maxX;
+            
+            // Ограничение на максимальное растяжение стека
+            const minXForMaxWidth = effectiveRightX - maxStackWidth;
+            if (minXForMaxWidth > min) min = minXForMaxWidth;
           }
         }
         
@@ -103,17 +119,26 @@ export function getDrawerLimitsForPanel(app, panel) {
             // Минимальная ширина = MIN_WIDTH
             const minX = effectiveLeftX + CONFIG.DRAWER.MIN_WIDTH;
             if (minX > min) min = minX;
+            
+            // Ограничение на максимальное растяжение стека
+            const maxXForMaxWidth = effectiveLeftX + maxStackWidth;
+            if (maxXForMaxWidth < max) max = maxXForMaxWidth;
           }
         }
       }
     } else if (!drawer.stackId) {
-      // Одиночный ящик - старая логика
+      // Одиночный ящик
       if (panel.isHorizontal) {
         if (isBottomBoundary) {
           const topY = getPanelCoord(app, conn.topShelf, 'y');
           if (topY !== null) {
+            // Минимальная высота
             const maxY = topY - CONFIG.DRAWER.MIN_HEIGHT;
             if (maxY < max) max = maxY;
+            
+            // Максимальная высота
+            const minYForMaxHeight = topY - CONFIG.DRAWER.MAX_HEIGHT;
+            if (minYForMaxHeight > min) min = minYForMaxHeight;
           }
         }
         
@@ -121,8 +146,13 @@ export function getDrawerLimitsForPanel(app, panel) {
           const bottomY = getPanelCoord(app, conn.bottomShelf, 'y');
           if (bottomY !== null) {
             const effectiveBottomY = conn.bottomShelf.type === 'bottom' ? bottomY : (bottomY + CONFIG.DSP);
+            // Минимальная высота
             const minY = effectiveBottomY + CONFIG.DRAWER.MIN_HEIGHT;
             if (minY > min) min = minY;
+            
+            // Максимальная высота
+            const maxYForMaxHeight = effectiveBottomY + CONFIG.DRAWER.MAX_HEIGHT;
+            if (maxYForMaxHeight < max) max = maxYForMaxHeight;
           }
         }
       } else {
@@ -130,8 +160,13 @@ export function getDrawerLimitsForPanel(app, panel) {
           const rightX = getPanelCoord(app, conn.rightDivider, 'x');
           if (rightX !== null) {
             const effectiveRightX = conn.rightDivider.type === 'right' ? rightX : (rightX - CONFIG.DSP);
+            // Минимальная ширина
             const maxX = effectiveRightX - CONFIG.DRAWER.MIN_WIDTH;
             if (maxX < max) max = maxX;
+            
+            // Максимальная ширина
+            const minXForMaxWidth = effectiveRightX - CONFIG.DRAWER.MAX_WIDTH;
+            if (minXForMaxWidth > min) min = minXForMaxWidth;
           }
         }
         
@@ -139,8 +174,13 @@ export function getDrawerLimitsForPanel(app, panel) {
           const leftX = getPanelCoord(app, conn.leftDivider, 'x');
           if (leftX !== null) {
             const effectiveLeftX = conn.leftDivider.type === 'left' ? leftX : (leftX + CONFIG.DSP);
+            // Минимальная ширина
             const minX = effectiveLeftX + CONFIG.DRAWER.MIN_WIDTH;
             if (minX > min) min = minX;
+            
+            // Максимальная ширина
+            const maxXForMaxWidth = effectiveLeftX + CONFIG.DRAWER.MAX_WIDTH;
+            if (maxXForMaxWidth < max) max = maxXForMaxWidth;
           }
         }
       }
