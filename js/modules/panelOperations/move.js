@@ -27,22 +27,34 @@ export function movePanel(app, panel, coords) {
   
   const newPos = panel.isHorizontal ? coords.y : coords.x;
   
+  // Проверяем, является ли панель границей стека ящиков
+  const isPanelStackBoundary = Array.from(app.drawers.values()).some(d => {
+    const conn = d.connections;
+    return d.stackId && (
+      conn.bottomShelf === panel || conn.topShelf === panel ||
+      conn.leftDivider === panel || conn.rightDivider === panel
+    );
+  });
+  
   // Находим ограничения от других панелей того же типа
   let min = panel.isHorizontal ? app.cabinet.base + CONFIG.MIN_GAP : CONFIG.DSP + CONFIG.MIN_GAP;
   let max = panel.isHorizontal ? app.cabinet.height - CONFIG.DSP - CONFIG.MIN_GAP : app.cabinet.width - CONFIG.DSP - CONFIG.MIN_GAP;
   
-  for (let other of app.panels.values()) {
-    if (other === panel || other.type !== panel.type) continue;
-    
-    const overlap1 = Math.max(panel.start, other.start);
-    const overlap2 = Math.min(panel.end, other.end);
-    
-    if (overlap2 > overlap1) {
-      if (other.mainPosition < panel.mainPosition && other.mainPosition + CONFIG.MIN_GAP > min) {
-        min = other.mainPosition + CONFIG.MIN_GAP;
-      }
-      if (other.mainPosition > panel.mainPosition && other.mainPosition - CONFIG.MIN_GAP < max) {
-        max = other.mainPosition - CONFIG.MIN_GAP;
+  // Если панель - граница стека, НЕ применяем MIN_GAP к другим панелям
+  if (!isPanelStackBoundary) {
+    for (let other of app.panels.values()) {
+      if (other === panel || other.type !== panel.type) continue;
+      
+      const overlap1 = Math.max(panel.start, other.start);
+      const overlap2 = Math.min(panel.end, other.end);
+      
+      if (overlap2 > overlap1) {
+        if (other.mainPosition < panel.mainPosition && other.mainPosition + CONFIG.MIN_GAP > min) {
+          min = other.mainPosition + CONFIG.MIN_GAP;
+        }
+        if (other.mainPosition > panel.mainPosition && other.mainPosition - CONFIG.MIN_GAP < max) {
+          max = other.mainPosition - CONFIG.MIN_GAP;
+        }
       }
     }
   }

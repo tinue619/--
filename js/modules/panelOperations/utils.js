@@ -57,7 +57,9 @@ export function getDrawerLimitsForPanel(app, panel) {
       // Это стек - обрабатываем его целиком
       processedStacks.add(drawer.stackId);
       
-      const stackCount = drawer.stackCount;
+      // Находим все ящики в стеке и суммируем их минимальные высоты
+      const stackDrawers = Array.from(app.drawers.values()).filter(d => d.stackId === drawer.stackId);
+      const minStackHeight = stackDrawers.length * CONFIG.DRAWER.MIN_HEIGHT;
       
       if (panel.isHorizontal) {
         // Двигаем горизонтальную панель (полку)
@@ -66,8 +68,7 @@ export function getDrawerLimitsForPanel(app, panel) {
           const topY = getPanelCoord(app, conn.topShelf, 'y');
           if (topY !== null) {
             const effectiveTopY = conn.topShelf.type === 'top' ? topY : topY;
-            // Минимальная высота стека = stackCount * MIN_HEIGHT
-            const minStackHeight = stackCount * CONFIG.DRAWER.MIN_HEIGHT;
+            // Сумма минимальных высот всех ящиков в стеке
             const maxY = effectiveTopY - minStackHeight;
             if (maxY < max) max = maxY;
           }
@@ -78,8 +79,7 @@ export function getDrawerLimitsForPanel(app, panel) {
           const bottomY = getPanelCoord(app, conn.bottomShelf, 'y');
           if (bottomY !== null) {
             const effectiveBottomY = conn.bottomShelf.type === 'bottom' ? bottomY : (bottomY + CONFIG.DSP);
-            // Минимальная высота стека = stackCount * MIN_HEIGHT
-            const minStackHeight = stackCount * CONFIG.DRAWER.MIN_HEIGHT;
+            // Сумма минимальных высот всех ящиков в стеке
             const minY = effectiveBottomY + minStackHeight;
             if (minY > min) min = minY;
           }
