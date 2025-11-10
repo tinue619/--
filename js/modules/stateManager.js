@@ -4,6 +4,9 @@
 import { CONFIG } from '../config.js';
 import { Panel } from '../Panel.js';
 import { Drawer } from '../Drawer.js';
+import { updateCanvas } from './interactions.js';
+import { render2D } from './render2D.js';
+import { updateDrawerMeshes } from './render3D.js';
 
 /**
  * Конвертировать Panel ссылки в ID для сохранения
@@ -90,6 +93,9 @@ export function loadState(app) {
       app.cabinet.base = data.cabinet.base;
       app.updateCalc();
       
+      // Обновляем canvas для правильного центрирования
+      updateCanvas(app);
+      
       // Обновляем 3D корпус если он уже инициализирован
       if (app.viewer3D) {
         app.viewer3D.rebuildCabinet();
@@ -132,6 +138,11 @@ export function loadState(app) {
           const drawer = Drawer.fromJSON(drawerData, app.panels, app);
           drawer.calculateParts(app);  // Пересчитываем части
           app.drawers.set(drawer.id, drawer);
+          
+          // Обновляем 3D меши для ящика если 3D уже инициализирован
+          if (app.viewer3D) {
+            updateDrawerMeshes(app, drawer);
+          }
         });
         
         if (data.nextDrawerId !== undefined) {

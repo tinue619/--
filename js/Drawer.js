@@ -278,6 +278,9 @@ export class Drawer {
     return {
       type: this.type,
       id: this.id,
+      stackId: this.stackId,
+      stackIndex: this.stackIndex,
+      stackCount: this.stackCount,
       connections: {
         bottomShelf: serializeConnection(this.connections.bottomShelf),
         topShelf: serializeConnection(this.connections.topShelf),
@@ -450,6 +453,12 @@ export class Drawer {
       };
     }
 
-    return new Drawer(data.id, connections);
+    return new Drawer(
+      data.id,
+      connections,
+      data.stackId || null,
+      data.stackIndex || 0,
+      data.stackCount || 1
+    );
   }
 }

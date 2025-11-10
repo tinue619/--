@@ -12,8 +12,21 @@ import { renderAll3D, removeMesh, updateDrawerMeshes, removeDrawerMeshes } from 
  */
 export function deletePanel(app, panel) {
   if (panel.type === 'drawer') {
-    removeDrawerMeshes(app, panel);
-    app.drawers.delete(panel.id);
+    // Если ящик в стеке - удаляем весь стек
+    if (panel.stackId) {
+      const stackDrawers = Array.from(app.drawers.values())
+        .filter(d => d.stackId === panel.stackId);
+      
+      for (let drawer of stackDrawers) {
+        removeDrawerMeshes(app, drawer);
+        app.drawers.delete(drawer.id);
+      }
+    } else {
+      // Одиночный ящик - удаляем только его
+      removeDrawerMeshes(app, panel);
+      app.drawers.delete(panel.id);
+    }
+    
     app.saveHistory();
     render2D(app);
     renderAll3D(app);

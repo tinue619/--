@@ -109,6 +109,32 @@ export function moveSide(app, side, newX) {
     } else {
       maxX = app.cabinet.width - MIN_CABINET_WIDTH + CONFIG.DSP/2;
     }
+    
+    // Ограничения от ящиков
+    const virtualLeft = {
+      type: 'left',
+      id: 'virtual-left',
+      position: { x: CONFIG.DSP/2 },
+      isHorizontal: false
+    };
+    
+    const drawerLimits = getDrawerLimitsForPanel(app, virtualLeft);
+    
+    // Ограничение на сжатие (не можем двигать вправо больше минимума ящика)
+    if (drawerLimits.max < Infinity) {
+      const maxXFromDrawers = drawerLimits.max - CONFIG.DSP/2;
+      if (maxXFromDrawers < maxX) {
+        maxX = maxXFromDrawers;
+      }
+    }
+    
+    // Ограничение на растяжение (не можем двигать влево больше максимума ящика)
+    if (drawerLimits.min > -Infinity) {
+      const minXFromDrawers = drawerLimits.min - CONFIG.DSP/2;
+      if (minXFromDrawers > minX) {
+        minX = minXFromDrawers;
+      }
+    }
   } else {
     maxX = MAX_CABINET_WIDTH - CONFIG.DSP/2;
     
@@ -125,6 +151,32 @@ export function moveSide(app, side, newX) {
       minX = rightmostDivider.position.x + CONFIG.MIN_GAP + CONFIG.DSP/2;
     } else {
       minX = MIN_CABINET_WIDTH - CONFIG.DSP/2;
+    }
+    
+    // Ограничения от ящиков
+    const virtualRight = {
+      type: 'right',
+      id: 'virtual-right',
+      position: { x: app.cabinet.width - CONFIG.DSP/2 },
+      isHorizontal: false
+    };
+    
+    const drawerLimits = getDrawerLimitsForPanel(app, virtualRight);
+    
+    // Ограничение на сжатие (не можем двигать влево больше минимума ящика)
+    if (drawerLimits.min > -Infinity) {
+      const minXFromDrawers = drawerLimits.min + CONFIG.DSP/2;
+      if (minXFromDrawers > minX) {
+        minX = minXFromDrawers;
+      }
+    }
+    
+    // Ограничение на растяжение (не можем двигать вправо больше максимума ящика)
+    if (drawerLimits.max < Infinity) {
+      const maxXFromDrawers = drawerLimits.max + CONFIG.DSP/2;
+      if (maxXFromDrawers < maxX) {
+        maxX = maxXFromDrawers;
+      }
     }
   }
   
@@ -210,10 +262,19 @@ export function moveHorizontalSide(app, side, newY) {
     
     const drawerLimits = getDrawerLimitsForPanel(app, virtualBottom);
     
+    // Ограничение на сжатие (не можем поднимать дно выше минимума ящика)
     if (drawerLimits.max < Infinity) {
       const maxBaseFromDrawers = drawerLimits.max;
       if (maxBaseFromDrawers < maxBase) {
         maxBase = maxBaseFromDrawers;
+      }
+    }
+    
+    // Ограничение на растяжение (не можем опускать дно ниже максимума ящика)
+    if (drawerLimits.min > -Infinity) {
+      const minBaseFromDrawers = drawerLimits.min;
+      if (minBaseFromDrawers > minBase) {
+        minBase = minBaseFromDrawers;
       }
     }
     
@@ -256,10 +317,19 @@ export function moveHorizontalSide(app, side, newY) {
     
     const drawerLimits = getDrawerLimitsForPanel(app, virtualTop);
     
+    // Ограничение на сжатие (не можем опускать крышу ниже минимума ящика)
     if (drawerLimits.min > -Infinity) {
       const minHeightFromDrawers = drawerLimits.min + CONFIG.DSP;
       if (minHeightFromDrawers > minHeight) {
         minHeight = minHeightFromDrawers;
+      }
+    }
+    
+    // Ограничение на растяжение (не можем поднимать крышу выше максимума ящика)
+    if (drawerLimits.max < Infinity) {
+      const maxHeightFromDrawers = drawerLimits.max + CONFIG.DSP;
+      if (maxHeightFromDrawers < maxHeight) {
+        maxHeight = maxHeightFromDrawers;
       }
     }
     
