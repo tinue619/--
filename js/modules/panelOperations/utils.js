@@ -68,7 +68,7 @@ export function getDrawerLimitsForPanel(app, panel) {
           // Панель - нижняя граница стека
           const topY = getPanelCoord(app, conn.topShelf, 'y');
           if (topY !== null) {
-            const effectiveTopY = conn.topShelf.type === 'top' ? topY : topY;
+            const effectiveTopY = conn.topShelf.type === 'top' ? topY : (topY - CONFIG.DSP);
             // Сумма минимальных высот всех ящиков в стеке
             const maxY = effectiveTopY - minStackHeight;
             if (maxY < max) max = maxY;
@@ -132,12 +132,13 @@ export function getDrawerLimitsForPanel(app, panel) {
         if (isBottomBoundary) {
           const topY = getPanelCoord(app, conn.topShelf, 'y');
           if (topY !== null) {
+            const effectiveTopY = conn.topShelf.type === 'top' ? topY : (topY - CONFIG.DSP);
             // Минимальная высота
-            const maxY = topY - CONFIG.DRAWER.MIN_HEIGHT;
+            const maxY = effectiveTopY - CONFIG.DRAWER.MIN_HEIGHT;
             if (maxY < max) max = maxY;
             
             // Максимальная высота
-            const minYForMaxHeight = topY - CONFIG.DRAWER.MAX_HEIGHT;
+            const minYForMaxHeight = effectiveTopY - CONFIG.DRAWER.MAX_HEIGHT;
             if (minYForMaxHeight > min) min = minYForMaxHeight;
           }
         }
