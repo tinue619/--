@@ -1,6 +1,7 @@
 // ========== 2D ОТРИСОВКА ==========
 
 import { CONFIG } from '../config.js';
+import { renderDimensions } from './dimensions.js';
 
 /**
  * Отрисовка 2D вида шкафа на canvas
@@ -116,6 +117,9 @@ export function render2D(app) {
       (front.bounds.y2 - front.bounds.y1) * scale
     );
   }
+  
+  // Размеры ячеек (если включены)
+  renderDimensions(ctx, app, scale, toY);
   
   ctx.restore();
 }

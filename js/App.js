@@ -88,6 +88,7 @@ export class App {
     this.nextId = 0;
     this.nextDrawerId = 0;
     this.drawerCount = 1;  // Количество ящиков в стеке (1-5)
+    this.showDimensions = false;  // Показывать размеры ячеек
     
     // Взаимодействие
     this.interaction = {
