@@ -16,6 +16,7 @@ export class Drawer {
     this.parts = null;
     this.boxLength = null;
     this.volume = null;
+    this.isOpen = false; // Состояние выдвижения ящика
   }
 
   /**

@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { CONFIG } from '../config.js';
 import { Viewer3D } from '../Viewer3D.js';
+import { handleDrawerClick } from './drawerAnimation.js';
 
 /**
  * Инициализация 3D viewer
@@ -10,6 +11,13 @@ import { Viewer3D } from '../Viewer3D.js';
 export function initViewer3D(app) {
   app.viewer3D = new Viewer3D(app);
   renderAll3D(app);
+  
+  // Подключаем обработчик кликов по 3D сцене
+  if (app.viewer3D && app.viewer3D.renderer) {
+    app.viewer3D.renderer.domElement.addEventListener('click', (event) => {
+      handleDrawerClick(app, event);
+    });
+  }
 }
 
 /**

@@ -44,6 +44,9 @@ export class Viewer3D {
     this.controls.dampingFactor = 0.05;
     this.controls.target.set(0, this.app.cabinet.height / 2, 0);
     
+    // Raycaster для определения кликов по объектам
+    this.raycaster = new THREE.Raycaster();
+    
     // Материалы
     this.materials = {
       dsp: new THREE.MeshStandardMaterial({ 
