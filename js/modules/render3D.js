@@ -191,11 +191,18 @@ export function updateDrawerMeshes(app, drawer) {
       }
     }
     
-    // Позиция в 3D пространстве (центрированное на 0,0,0)
+    // Базовая позиция в 3D пространстве (центрированное на 0,0,0)
+    let posZ = part.position.z - app.cabinet.depth / 2;
+    
+    // Если ящик выдвинут - добавляем смещение
+    if (drawer.isOpen) {
+      posZ += drawer.boxLength * 0.7;
+    }
+    
     mesh.position.set(
       part.position.x - app.cabinet.width / 2,
       part.position.y,
-      part.position.z - app.cabinet.depth / 2
+      posZ
     );
   });
 }
