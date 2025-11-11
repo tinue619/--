@@ -79,9 +79,11 @@ export function handleDrawerClick(app, event) {
   // Настраиваем raycaster
   app.viewer3D.raycaster.setFromCamera(mouse, app.viewer3D.camera);
   
-  // Находим все пересечения
-  const allMeshes = Array.from(app.mesh3D.values());
-  const intersects = app.viewer3D.raycaster.intersectObjects(allMeshes, false);
+  // Находим все пересечения - включаем ВСЁ в сцене (корпус + панели + ящики)
+  const intersects = app.viewer3D.raycaster.intersectObjects(
+    app.viewer3D.scene.children,
+    true  // recursive - проверяем вложенные объекты
+  );
   
   if (intersects.length === 0) return;
   
